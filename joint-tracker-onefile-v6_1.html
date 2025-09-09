@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Joint Tracker – OneFile v6.1</title>
+<meta name="theme-color" content="#0f172a">
+<style>
+  :root{
+    --bg:#0b1020; --bg-2:#0a0f1f; --panel:#111a34; --panel-2:#0f172a; --card:#0b1329;
+    --text:#e5e7eb; --muted:#a6b0c2; --border:#1f2a4a; --ring:#22c55e55;
+    --accent:#22c55e; --accent-2:#16a34a; --info:#60a5fa; --danger:#ef4444; --warn:#f59e0b;
+    --shadow: 0 12px 40px rgba(0,0,0,.38);
+  }
+  [data-theme="light"]{
+    --bg:#f6f8fb; --bg-2:#eef2f7; --panel:#ffffff; --panel-2:#f9fbff; --card:#ffffff;
+    --text:#0f172a; --muted:#4b5563; --border:#dbe1ea; --ring:#22c55e55;
+    --accent:#16a34a; --accent-2:#15803d; --info:#2563eb; --danger:#dc2626; --warn:#d97706;
+    --shadow: 0 10px 30px rgba(2,6,23,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,system-ui,Roboto,"Segoe UI",Arial,"Helvetica Neue",sans-serif;background:linear-gradient(180deg,var(--bg),var(--bg-2));color:var(--text)}
+  .container{max-width:1000px;margin:0 auto;padding:16px}
+  .appbar{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,0));backdrop-filter:blur(8px);padding:10px 0 6px 0}
+  header.brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand-left{display:flex;align-items:center;gap:12px}
+  .logo{width:40px;height:40px;border-radius:12px;background:radial-gradient(120% 120% at 30% 20%,#34d399 0%,#15803d 60%);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;letter-spacing:.5px;box-shadow:0 8px 30px rgba(34,197,94,.35)}
+  h1{font-size:20px;margin:0}
+  .sub{font-size:12px;color:var(--muted)}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn,input,select,textarea{border:1px solid var(--border);background:linear-gradient(180deg,var(--card),var(--panel-2));color:var(--text);border-radius:12px;padding:10px 12px;font-size:16px;outline:none;transition:.15s ease}
+  .btn{cursor:pointer;user-select:none}
+  .btn:hover{transform:translateY(-1px)}
+  .btn:active{transform:translateY(0);filter:brightness(.98)}
+  .btn.primary{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:#04130a;font-weight:800}
+  .btn.ghost{background:transparent}
+  .btn.badge{font-size:12px;padding:4px 8px;border-radius:999px}
+  .danger{color:var(--danger)}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-top:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .stat{background:linear-gradient(180deg,var(--card),var(--panel-2));border:1px solid var(--border);border-radius:12px;padding:12px;min-width:140px}
+  .stat .label{color:var(--muted);font-size:12px}
+  .stat .value{font-size:22px;font-weight:800;letter-spacing:.3px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{font-size:12px;border:1px solid var(--border);background:linear-gradient(180deg,var(--card),var(--panel-2));border-radius:999px;padding:6px 10px}
+  .pill{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:linear-gradient(180deg,var(--card),var(--panel-2));color:#cbd5e1}
+
+  /* Kalender */
+  .cal-header{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:10px}
+  .cal-nav{display:flex;gap:6px;align-items:center}
+  .month{font-weight:800;letter-spacing:.3px}
+  .today-pill{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:linear-gradient(180deg,var(--card),var(--panel-2));color:var(--muted)}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .cal-dow{font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px}
+  .cal-cell{position:relative;border:1px solid var(--border);border-radius:14px;padding:10px;background:linear-gradient(180deg,var(--card),var(--panel-2));min-height:92px;display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;cursor:pointer;user-select:none;transition:.15s ease}
+  .cal-cell:hover{box-shadow:0 8px 24px rgba(0,0,0,.18);transform:translateY(-1px)}
+  .cal-cell .daynum{position:absolute;top:8px;left:10px;font-size:12px;color:var(--muted)}
+  .cal-cell .count{margin:auto;align-self:center;font-weight:900;font-size:28px;letter-spacing:.4px}
+  .cal-cell.dim{opacity:.42}
+  .cal-cell.today{outline:3px solid var(--info);box-shadow:0 0 0 4px rgba(96,165,250,.25) inset}
+  .cal-foot{position:absolute;bottom:8px;left:10px;right:10px;font-size:11px;color:#cbd5e1;display:flex;justify-content:space-between}
+  .limit-hit .count{color:#fca5a5}
+  .week-over .cal-foot{color:#fca5a5}
+
+  .list{max-height:320px;overflow:auto}
+  .item{border-bottom:1px solid var(--border);padding:8px 0}
+  canvas{width:100%;height:210px;background:linear-gradient(180deg,var(--card),var(--panel-2));border:1px solid var(--border);border-radius:12px}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end}
+  .sheet{width:100%;max-height:80%;background:linear-gradient(180deg,var(--panel),var(--panel-2));border-top-left-radius:18px;border-top-right-radius:18px;border:1px solid var(--border);padding:14px;overflow:auto;box-shadow:var(--shadow)}
+  .sheet header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .close{background:transparent;border:1px solid var(--border);border-radius:12px;color:inherit;padding:8px 12px}
+  .detail-summary{display:flex;gap:12px;flex-wrap:wrap;color:#cbd5e1;font-size:12px;margin-bottom:8px}
+  .detail-item{border-bottom:1px solid var(--border);padding:8px 0}
+  .actions{display:flex;gap:6px}
+  .edit-form{display:grid;grid-template-columns: repeat(6, minmax(0,1fr)); gap:6px;margin-top:6px}
+  .edit-form input, .edit-form select{font-size:14px;padding:8px;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="appbar">
+  <div class="container">
+    <header class="brand">
+      <div class="brand-left">
+        <div class="logo">JT</div>
+        <div>
+          <h1>Joint Tracker</h1>
+          <div class="sub">lokal · offline · OneFile</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="btn ghost" id="themeToggle" title="Light/Dark umschalten">🌓</button>
+      </div>
+    </header>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Eingabe -->
+  <div class="card">
+    <div class="row">
+      <select id="method"><option>Joint</option><option>Vape</option><option>Bong</option><option>Pfeife</option></select>
+      <input id="qty" type="number" value="1" min="1" style="max-width:90px">
+      <input id="grams" type="number" placeholder="Gramm/J" step="0.05" style="max-width:120px">
+      <input id="pot" type="number" placeholder="THC %" step="0.5" style="max-width:110px">
+      <input id="time" type="time" title="Zeitpunkt (optional)">
+      <input id="tag" placeholder="Tag (optional)">
+      <input id="note" placeholder="Bemerkung (optional)" style="min-width:200px">
+      <button class="btn primary" id="logBtn">+ Eintrag</button>
+      <div class="spacer"></div>
+      <button class="btn" id="exportCsv" title="CSV Export">Export CSV</button>
+      <button class="btn" id="backupJson" title="Backup JSON">Backup</button>
+    </div>
+  </div>
+
+  <!-- Badges & Stats -->
+  <div class="card">
+    <div class="badges" id="badges"></div>
+    <div class="row" style="margin-top:8px">
+      <div class="stat"><div class="label">Heute · Joints</div><div class="value" id="todayQty">0</div></div>
+      <div class="stat"><div class="label">Heute · g</div><div class="value" id="todayGrams">0</div></div>
+      <div class="stat"><div class="label">30 Tage · Joints</div><div class="value" id="monthQty">0</div></div>
+      <div class="stat"><div class="label">Ø/Tag (30T)</div><div class="value" id="avgDay">0</div></div>
+      <div class="stat"><div class="label">Trend (7d vs 7d)</div><div class="value" id="trend7">0%</div></div>
+    </div>
+  </div>
+
+  <!-- Kalender -->
+  <div class="card">
+    <div class="cal-header">
+      <div class="cal-nav">
+        <button class="btn" id="prevMonth">‹</button>
+        <div id="monthTitle" class="month"></div>
+        <button class="btn" id="nextMonth">›</button>
+      </div>
+      <div class="today-pill" id="todayPill">Heute: –</div>
+      <div class="row">
+        <span class="muted">Tageslimit</span>
+        <input id="dailyLimit" type="number" min="0" step="1" placeholder="z. B. 2" style="max-width:90px">
+        <span class="muted">Wochenlimit</span>
+        <input id="weeklyLimit" type="number" min="0" step="1" placeholder="z. B. 10" style="max-width:90px">
+        <button class="btn" id="saveLimit">Speichern</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="dow">
+      <div class="cal-dow">Mo</div><div class="cal-dow">Di</div><div class="cal-dow">Mi</div><div class="cal-dow">Do</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div><div class="cal-dow">So</div>
+    </div>
+    <div class="cal-grid" id="cal"></div>
+  </div>
+
+  <!-- Analytics -->
+  <div class="card">
+    <div class="row" style="font-weight:700;margin-bottom:6px">Analytics</div>
+    <div class="row" style="gap:12px;flex-wrap:wrap">
+      <div style="flex:1 1 300px">
+        <div class="muted" style="margin:0 0 6px 2px">Ø nach Wochentag (Joints)</div>
+        <canvas id="weekdayChart" width="600" height="210" aria-label="Durchschnitt nach Wochentag"></canvas>
+      </div>
+      <div style="flex:1 1 300px">
+        <div class="muted" style="margin:0 0 6px 2px">Methoden-Verteilung (30 Tage)</div>
+        <canvas id="methodChart" width="600" height="210" aria-label="Verteilung"></canvas>
+      </div>
+      <div style="flex:1 1 300px">
+        <div class="muted" style="margin:0 0 6px 2px">Jahresübersicht (Summe pro Monat)</div>
+        <div class="heatmap" id="yearHeatmap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:6px">Letzte Einträge</div>
+    <div class="list" id="list"></div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal" id="modal">
+  <div class="sheet">
+    <header>
+      <div id="modalTitle" style="font-weight:700"></div>
+      <button class="btn close" id="closeModal">Schließen</button>
+    </header>
+    <div id="modalSummary" class="detail-summary"></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ===== Theme =====
+const themeKey='jt_theme';
+function applyTheme(t){document.documentElement.setAttribute('data-theme', t==='light'?'light':(t==='dark'?'dark':'auto'));try{localStorage.setItem(themeKey,t);}catch{}}
+(function(){applyTheme(localStorage.getItem(themeKey)||'auto')})();
+document.getElementById('themeToggle').onclick=()=>{const cur=document.documentElement.getAttribute('data-theme');applyTheme(cur==='light'?'dark':(cur==='dark'?'auto':'light'));};
+
+// ===== Data helpers =====
+const KEY="jt_onefile_v3"; // kompatibel halten
+const $=id=>document.getElementById(id);
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return []}}
+function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
+function loadLimit(){return Number(localStorage.getItem('jt_daily_limit')||0)||null}
+function loadWeeklyLimit(){return Number(localStorage.getItem('jt_weekly_limit')||0)||null}
+function saveLimit(v){if(v==null||v==='')localStorage.removeItem('jt_daily_limit');else localStorage.setItem('jt_daily_limit',String(v));}
+function saveWeeklyLimit(v){if(v==null||v==='')localStorage.removeItem('jt_weekly_limit');else localStorage.setItem('jt_weekly_limit',String(v));}
+
+// ===== Add / Export =====
+function add(){
+  const e=load();
+  let tsDate=new Date(); // heutig, lokale Zeit/Datum
+  const timeStr=$("time").value;
+  if(timeStr){const[hh,mm]=timeStr.split(':').map(Number);tsDate.setHours(hh||0,mm||0,0,0);}
+  e.push({id:crypto.randomUUID(),ts:tsDate.toISOString(),method:$("method").value,qty:Number($("qty").value),
+          g:$("grams").value?Number($("grams").value):null,p:$("pot").value?Number($("pot").value):null,
+          tag:$("tag").value||"",note:$("note").value||""});
+  save(e); $("tag").value="";$("note").value="";$("qty").value=1;$("time").value="";renderAll();
+}
+$("logBtn").onclick=add;
+$("exportCsv").onclick=()=>{
+  const rows=[['timestamp_iso','method','qty','amount_g','thc_percent','tag','note','grams_total','thc_mg_total']];
+  for(const e of load()){const grams=e.g?e.g*e.qty:0;const thc=(e.g&&e.p)?Math.round(e.g*e.qty*e.p/100*1000):0;rows.push([e.ts,e.method,e.qty,e.g??'',e.p??'',e.tag??'',e.note??'',grams.toFixed(3),thc]);}
+  const csv=rows.map(r=>r.map(v=>String(v).replaceAll('"','""')).map(v=>`"${v}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='joint-tracker-export.csv';a.click();URL.revokeObjectURL(url);
+};
+$("backupJson").onclick=()=>{const data=JSON.stringify(load(),null,2);const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');a.href=url;a.download=`jt-backup-${stamp}.json`;a.click();URL.revokeObjectURL(url);};
+
+// ===== Stats / Badges =====
+function sumRange(days,metric){const ev=load();const cut=new Date();cut.setDate(cut.getDate()-days+1);cut.setHours(0,0,0,0);let s=0;for(const e of ev){const t=new Date(e.ts);if(t>=cut){if(metric==='qty'){s+=e.qty}else if(metric==='grams'){s+=e.g?e.g*e.qty:0}}}return s}
+function smokeFreeStreak(){const ev=load();const byDay=new Map();for(const e of ev){const d=new Date(e.ts);const key=d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();byDay.set(key,(byDay.get(key)||0)+e.qty)}let streak=0;const today=new Date();for(let i=0;i<400;i++){const x=new Date(today);x.setDate(today.getDate()-i);const key=x.getFullYear()+"-"+(x.getMonth()+1)+"-"+x.getDate();const v=byDay.get(key)||0;if(v===0)streak++;else break}return streak}
+function renderBadges(){const box=$('badges');box.innerHTML='';const s=smokeFreeStreak();if(s>=1)box.appendChild(b(`🚭 Streak ${s}d`));if([7,14,30,60,90].some(m=>s===m))box.appendChild(b(`🏅 Meilenstein ${s} Tage`));const wlim=loadWeeklyLimit();if(wlim){const sumLastWeek=weekSumEndingAtDate(new Date());if(sumLastWeek<=wlim)box.appendChild(b(`✅ Unter Wochenlimit (${sumLastWeek}/${wlim})`))}function b(txt){const el=document.createElement('span');el.className='badge';el.textContent=txt;return el}}
+function renderStats(){const ev=load(),today=new Date();let tq=0,tg=0;for(const e of ev){const d=new Date(e.ts);if(d.toDateString()===today.toDateString()){tq+=e.qty;tg+=e.g?e.g*e.qty:0}}$("todayQty").textContent=tq;$("todayGrams").textContent=tg.toFixed(2);const m=sumRange(30,'qty');$("monthQty").textContent=m;$("avgDay").textContent=(m/30).toFixed(2);const last7=sumRange(7,'qty');const prev7=(function(){const ev=load();const end=new Date();end.setDate(end.getDate()-7);end.setHours(23,59,59,999);const start=new Date();start.setDate(start.getDate()-13);start.setHours(0,0,0,0);let s=0;for(const e of ev){const t=new Date(e.ts);if(t>=start&&t<=end)s+=e.qty}return s})();let pct=prev7===0?(last7>0?100:0):((last7-prev7)/prev7*100);const sign=pct>0?'+':'';$("trend7").textContent=`${sign}${pct.toFixed(0)}%`;renderBadges();}
+
+// ===== Calendar helpers =====
+let calYear, calMonth; // wichtig: nur einmal deklarieren
+function startOfMonth(y,m){return new Date(y,m,1)}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate()}
+function dayIndexMon0(d){const wd=d.getDay();return (wd+6)%7} // Mo=0
+function monthTitle(y,m){const names=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];return names[m]+" "+y}
+function dateKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0')}
+function totalsByDay(y,m){const map=new Map();const ev=load();const start=new Date(y,m,1,0,0,0,0);const end=new Date(y,m,daysInMonth(y,m),23,59,59,999);for(const e of ev){const t=new Date(e.ts);if(t>=start&&t<=end){const key=dateKey(t);map.set(key,(map.get(key)||0)+Number(e.qty||0))}}return map}
+function isSunday(d){return d.getDay()===0}
+function weekSumRange(mon,sun){const ev=load();let s=0;for(const e of ev){const t=new Date(e.ts);if(t>=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate(),0,0,0,0)&&t<=new Date(sun.getFullYear(),sun.getMonth(),sun.getDate(),23,59,59,999))s+=e.qty}return s}
+function weekSumEndingAt(y,m,dNum){const d=new Date(y,m,dNum);const day=(d.getDay()+6)%7;const mon=new Date(d);mon.setDate(d.getDate()-day);const sun=new Date(mon);sun.setDate(mon.getDate()+6);return weekSumRange(mon,sun)}
+function weekSumEndingAtDate(d){const day=(d.getDay()+6)%7;const mon=new Date(d);mon.setDate(d.getDate()-day);const sun=new Date(mon);sun.setDate(mon.getDate()+6);return weekSumRange(mon,sun)}
+
+function updateTodayPill(){ const now=new Date(); const opts={weekday:'short', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}; $("todayPill").textContent = "Heute: " + now.toLocaleString([], opts); }
+
+function openModalForDate(y,m,dNum){
+  const d=new Date(y,m,dNum);
+  const key=dateKey(d);
+  const ev=load().filter(e=>dateKey(new Date(e.ts))===key).sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  const totalQty=ev.reduce((s,e)=>s+e.qty,0);
+  const totalG=ev.reduce((s,e)=>s+(e.g?e.g*e.qty:0),0);
+  const totalTHC=ev.reduce((s,e)=>s+((e.g&&e.p)?e.g*e.qty*e.p/100*1000:0),0);
+  let earliest=ev.length?new Date(ev[0].ts):null;
+  let latest=ev.length?new Date(ev[ev.length-1].ts):null;
+  $("modalTitle").textContent=`Details · ${key} (${totalQty}x)`;
+  $("modalSummary").innerHTML=`<span>Σ Joints: <strong>${totalQty}</strong></span><span>Σ g: <strong>${totalG.toFixed(2)}</strong></span><span>Σ THC: <strong>${Math.round(totalTHC)} mg</strong></span><span>${earliest?'von '+earliest.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):''} ${latest?'bis '+latest.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):''}</span>`;
+  const body=$("modalBody"); body.innerHTML="";
+  if(ev.length===0){const p=document.createElement("div");p.className="muted";p.textContent="Keine Einträge.";body.appendChild(p)}
+  for(const entry of ev){
+    const t=new Date(entry.ts);
+    const grams=entry.g?(entry.g*entry.qty).toFixed(2)+" g":"";
+    const thc=(entry.g&&entry.p)?(" ~"+Math.round(entry.g*entry.qty*entry.p/100*1000)+" mg THC"):"";
+    const div=document.createElement("div"); div.className="detail-item";
+    const lineId=`edit-${entry.id}`;
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div><strong>${entry.method}</strong> · ${entry.qty}x ${grams}${thc}</div>
+        <div class="actions">
+          <button class="btn badge" data-edit="${entry.id}">✏️</button>
+          <button class="btn badge danger" data-del="${entry.id}">🗑️</button>
+        </div>
+      </div>
+      <div class="muted" style="font-size:12px">${t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${entry.tag?`· #${entry.tag}`:``} ${entry.note?`· ${entry.note}`:``}</div>
+      <div id="${lineId}" style="display:none" class="edit-form">
+        <select data-f="method">
+          <option ${entry.method==='Joint'?'selected':''}>Joint</option>
+          <option ${entry.method==='Vape'?'selected':''}>Vape</option>
+          <option ${entry.method==='Bong'?'selected':''}>Bong</option>
+          <option ${entry.method==='Pfeife'?'selected':''}>Pfeife</option>
+        </select>
+        <input data-f="qty" type="number" min="1" step="1" value="${entry.qty}">
+        <input data-f="g" type="number" step="0.05" placeholder="g/J" value="${entry.g??''}">
+        <input data-f="p" type="number" step="0.5" placeholder="THC%" value="${entry.p??''}">
+        <input data-f="time" type="time" value="${t.toISOString().slice(11,16)}">
+        <input data-f="tag" type="text" placeholder="Tag" value="${entry.tag??''}">
+        <input data-f="note" type="text" placeholder="Bemerkung" value="${entry.note??''}">
+        <button class="btn badge" data-save="${entry.id}">Speichern</button>
+        <button class="btn badge" data-cancel="${entry.id}">Abbrechen</button>
+      </div>`;
+    body.appendChild(div);
+    const editBtn=div.querySelector(`[data-edit="${entry.id}"]`);
+    const delBtn=div.querySelector(`[data-del="${entry.id}"]`);
+    const saveBtn=div.querySelector(`[data-save="${entry.id}"]`);
+    const cancelBtn=div.querySelector(`[data-cancel="${entry.id}"]`);
+    const form=div.querySelector(`#${lineId}`);
+    editBtn.onclick=()=>{form.style.display=(form.style.display==='none'?'grid':'none')};
+    cancelBtn.onclick=()=>{form.style.display='none'};
+    delBtn.onclick=()=>{if(!confirm('Eintrag löschen?'))return;const all=load();const idx=all.findIndex(x=>x.id===entry.id);if(idx>=0){all.splice(idx,1);save(all);openModalForDate(d.getFullYear(),d.getMonth(),d.getDate());renderAll();}};
+    saveBtn.onclick=()=>{const all=load();const idx=all.findIndex(x=>x.id===entry.id);if(idx<0)return;const get=k=>form.querySelector(`[data-f="${k}"]`).value;const hhmm=get('time')||'12:00';const[hh,mm]=hhmm.split(':').map(Number);const nd=new Date(d.getFullYear(),d.getMonth(),d.getDate(),hh||0,mm||0,0,0);all[idx]={...all[idx],method:get('method'),qty:Number(get('qty')||1),g:get('g')?Number(get('g')):null,p:get('p')?Number(get('p')):null,tag:get('tag')||'',note:get('note')||'',ts:nd.toISOString()};save(all);openModalForDate(d.getFullYear(),d.getMonth(),d.getDate());renderAll();};
+  }
+  $("modal").style.display="flex";
+}
+
+function quickAddForDate(y,m,dNum){const ev=load();const date=new Date(y,m,dNum,12,0,0,0);ev.push({id:crypto.randomUUID(),ts:date.toISOString(),method:'Joint',qty:1,g:null,p:null,tag:'',note:'(schnell hinzugefügt)'});save(ev);renderAll();}
+
+function renderCalendar(){
+  $("monthTitle").textContent=monthTitle(calYear,calMonth);
+  const grid=$("cal");grid.innerHTML="";
+  const first=new Date(calYear,calMonth,1);
+  const firstIdx=dayIndexMon0(first);
+  const totalDays=daysInMonth(calYear,calMonth);
+  const prevMonthDays=daysInMonth(calYear,(calMonth+11)%12);
+  const today=new Date(); const todayKey=dateKey(today);
+  const totals=totalsByDay(calYear,calMonth);
+  const limit=loadLimit(); const wlimit=loadWeeklyLimit();
+  for(let i=0;i<42;i++){
+    let dNum,inMonth=true,y=calYear,m=calMonth;
+    if(i<firstIdx){dNum=prevMonthDays-(firstIdx-1-i);inMonth=false;m=(calMonth+11)%12;y=m===11?calYear-1:calYear}
+    else if(i>=firstIdx+totalDays){dNum=(i-(firstIdx+totalDays))+1;inMonth=false;m=(calMonth+1)%12;y=m===0?calYear+1:calYear}
+    else{dNum=(i-firstIdx)+1}
+    const cell=document.createElement("div");cell.className="cal-cell";if(!inMonth)cell.classList.add("dim");
+    const key=dateKey(new Date(y,m,dNum)); if(key===todayKey)cell.classList.add("today");
+    const qty=inMonth?(totals.get(key)||0):null; if(inMonth&&limit&&qty>limit)cell.classList.add('limit-hit');
+    const dn=document.createElement("div");dn.className="daynum";dn.textContent=dNum;
+    const count=document.createElement("div");count.className="count";count.textContent=inMonth?qty:"";
+    const foot=document.createElement("div");foot.className="cal-foot";
+    if(inMonth&&isSunday(new Date(y,m,dNum))){
+      const day=(new Date(y,m,dNum).getDay()+6)%7;const mon=new Date(y,m,dNum);mon.setDate(mon.getDate()-day);const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+      const wsum=weekSumRange(mon,sun); if(wlimit&&wsum>wlimit)cell.classList.add('week-over'); foot.innerHTML=`<span class="muted">Woche Σ</span><span>${wsum}</span>`;
+    }else{foot.innerHTML=`<span class="muted">${inMonth?"Tippen: Details · Lang drücken: +1":""}</span>`;}
+    cell.appendChild(dn);cell.appendChild(count);cell.appendChild(foot);
+    if(inMonth){
+      cell.addEventListener("click",()=>openModalForDate(calYear,calMonth,dNum));
+      let pressTimer=null;
+      cell.addEventListener('touchstart',()=>{pressTimer=setTimeout(()=>quickAddForDate(calYear,calMonth,dNum),550)});
+      cell.addEventListener('touchend',()=>clearTimeout(pressTimer));
+      cell.addEventListener('touchmove',()=>clearTimeout(pressTimer));
+      cell.addEventListener('mousedown',()=>{pressTimer=setTimeout(()=>quickAddForDate(calYear,calMonth,dNum),600)});
+      cell.addEventListener('mouseup',()=>clearTimeout(pressTimer));
+      cell.addEventListener('mouseleave',()=>clearTimeout(pressTimer));
+    }
+    grid.appendChild(cell);
+  }
+}
+
+// ===== Analytics (wie v6) =====
+function weekdayAverages(){const ev=load();const sums=new Array(7).fill(0);const counts=new Array(7).fill(0);for(const e of ev){const d=new Date(e.ts);const wd=(d.getDay()+6)%7;sums[wd]+=e.qty;counts[wd]+=1}return sums.map((s,i)=>counts[i]?s/(counts[i]):0)}
+function drawWeekdayChart(){const ctx=$('weekdayChart').getContext('2d');const vals=weekdayAverages();const labels=['Mo','Di','Mi','Do','Fr','Sa','So'];const W=ctx.canvas.width,H=ctx.canvas.height;ctx.clearRect(0,0,W,H);const grd=ctx.createLinearGradient(0,0,0,H);grd.addColorStop(0,'#0b1329');grd.addColorStop(1,'#0f172a');ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);ctx.strokeStyle='#1f2a4a';for(let i=0;i<5;i++){const y=H*(i/4);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}const max=Math.max(1,...vals);const pad=12,gap=8;const barW=(W-pad*2-gap*(vals.length-1))/vals.length;ctx.fillStyle='#22c55e';ctx.font='12px -apple-system,system-ui,sans-serif';ctx.textAlign='center';vals.forEach((v,i)=>{const x=pad+i*(barW+gap);const h=(v/max)*(H-28);const y=H-h-16;ctx.fillRect(x,y,barW,h);ctx.fillStyle='#64748b';ctx.fillText(labels[i],x+barW/2,H-4);ctx.fillStyle='#22c55e'})}
+function methodDistribution(days=30){const cut=new Date();cut.setDate(cut.getDate()-days+1);cut.setHours(0,0,0,0);const map=new Map();for(const e of load()){const t=new Date(e.ts);if(t>=cut){const k=e.method||'—';map.set(k,(map.get(k)||0)+Number(e.qty||0))}}return map}
+function drawMethodChart(){const ctx=$('methodChart').getContext('2d');const dist=methodDistribution(30);const labels=[...dist.keys()];const vals=[...dist.values()];const W=ctx.canvas.width,H=ctx.canvas.height;ctx.clearRect(0,0,W,H);const grd=ctx.createLinearGradient(0,0,0,H);grd.addColorStop(0,'#0b1329');grd.addColorStop(1,'#0f172a');ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);ctx.strokeStyle='#1f2a4a';for(let i=0;i<5;i++){const y=H*(i/4);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}const max=Math.max(1,...vals);const pad=12,gap=8;const barW=(W-pad*2-gap*(vals.length-1))/Math.max(1,vals.length);ctx.fillStyle='#60a5fa';ctx.font='12px -apple-system,system-ui,sans-serif';ctx.textAlign='center';vals.forEach((v,i)=>{const x=pad+i*(barW+gap);const h=(v/max)*(H-28);const y=H-h-16;ctx.fillRect(x,y,barW,h);ctx.fillStyle='#64748b';ctx.fillText(labels[i],x+barW/2,H-4);ctx.fillStyle='#60a5fa'})}
+function monthTotalsForYear(year){const arr=new Array(12).fill(0);for(const e of load()){const d=new Date(e.ts);if(d.getFullYear()===year){arr[d.getMonth()]+=e.qty}}return arr}
+function drawYearHeatmap(){const cont=$('yearHeatmap');cont.innerHTML='';const year=(new Date()).getFullYear();const totals=monthTotalsForYear(year);const names=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];const max=Math.max(1,...totals);for(let i=0;i<12;i++){const cell=document.createElement('div');cell.className='heat-cell';const sw=document.createElement('div');sw.className='heat-swatch';const intensity=totals[i]/max;sw.style.background=`rgb(${34}, ${120+Math.round(intensity*100)}, ${94})`;const label=document.createElement('div');label.innerHTML=`<strong>${names[i]}</strong><div class="muted">${totals[i]} J</div>`;cell.appendChild(sw);cell.appendChild(label);cont.appendChild(cell)}}
+
+// ===== Render All =====
+function renderList(){const list=$("list");list.innerHTML="";const ev=load().slice().reverse();if(ev.length===0){const p=document.createElement("div");p.className="muted";p.textContent="Keine Einträge.";list.appendChild(p);return}for(const e of ev.slice(0,150)){const d=new Date(e.ts);const div=document.createElement("div");div.className="item";div.innerHTML=`<div><strong>${e.method}</strong> · ${e.qty}x ${e.g?`· ${(e.g*e.qty).toFixed(2)} g`:``} ${e.p?`· ~${(e.g?e.g*e.qty:0)*e.p/100*1000|0} mg THC`:``}</div><div class="muted" style="font-size:12px">${d.toLocaleString()} ${e.tag?`· #${e.tag}`:``} ${e.note?`· ${e.note}`:``}</div>`;list.appendChild(div)}}
+function renderAll(){ $('dailyLimit').value = loadLimit() ?? ''; $('weeklyLimit').value = loadWeeklyLimit() ?? ''; updateTodayPill(); renderStats(); renderCalendar(); drawWeekdayChart(); drawMethodChart(); drawYearHeatmap(); renderList(); }
+setInterval(updateTodayPill, 30*1000); // jede 30s aktualisieren
+
+// ===== Init (FIX: keine Redeclaration!) =====
+(function init(){
+  const now=new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  document.getElementById("prevMonth").onclick=()=>{calMonth--; if(calMonth<0){calMonth=11;calYear--;}; renderCalendar();};
+  document.getElementById("nextMonth").onclick=()=>{calMonth++; if(calMonth>11){calMonth=0;calYear++;}; renderCalendar();};
+  document.getElementById("closeModal").onclick=()=>{$("modal").style.display="none"};
+  document.getElementById("saveLimit").onclick=()=>{saveLimit($('dailyLimit').value); saveWeeklyLimit($('weeklyLimit').value); renderCalendar(); renderBadges();};
+  document.addEventListener("DOMContentLoaded", renderAll());
+})();
+</script>
+</body>
+</html>
