@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Joint Tracker – OneFile v6.13</title>
+<meta name="theme-color" content="#0f172a">
+<style>
+  :root{
+    --bg:#0b1020; --bg-2:#0a0f1f; --panel:#111a34; --panel-2:#0f172a; --card:#0b1329;
+    --text:#e5e7eb; --muted:#a6b0c2; --border:#1f2a4a; --ring:#22c55e55;
+    --accent:#22c55e; --accent-2:#16a34a; --info:#60a5fa; --danger:#ef4444; --warn:#f59e0b;
+    --shadow: 0 12px 40px rgba(0,0,0,.38);
+  }
+  [data-theme="light"]{
+    --bg:#f6f8fb; --bg-2:#eef2f7; --panel:#ffffff; --panel-2:#f9fbff; --card:#ffffff;
+    --text:#0f172a; --muted:#4b5563; --border:#dbe1ea; --ring:#22c55e55;
+    --accent:#16a34a; --accent-2:#15803d; --info:#2563eb; --danger:#dc2626; --warn:#d97706;
+    --shadow: 0 10px 30px rgba(2,6,23,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Inter,system-ui,Roboto,"Segoe UI",Arial,"Helvetica Neue",sans-serif;background:linear-gradient(180deg,var(--bg),var(--bg-2));color:var(--text)}
+  .container{max-width:1000px;margin:0 auto;padding:16px}
+  .appbar{position:sticky;top:calc(env(safe-area-inset-top, 0px));z-index:40;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,0));backdrop-filter:blur(8px);padding:10px 0 6px 0}
+  header.brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand-left{display:flex;align-items:center;gap:12px}
+  .logo{width:40px;height:40px;border-radius:12px;background:radial-gradient(120% 120% at 30% 20%,#34d399 0%,#15803d 60%);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;letter-spacing:.5px;box-shadow:0 8px 30px rgba(34,197,94,.35)}
+  h1{font-size:20px;margin:0}
+  .sub{font-size:12px;color:var(--muted)}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn,input,select,textarea{border:1px solid var(--border);background:linear-gradient(180deg,var(--card),var(--panel-2));color:var(--text);border-radius:12px;padding:10px 12px;font-size:16px;outline:none;transition:.15s ease}
+  .btn{cursor:pointer;user-select:none}
+  .btn.primary{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:#04130a;font-weight:800}
+  .btn.ghost{background:transparent}
+  .btn.badge{font-size:12px;padding:4px 8px;border-radius:999px}
+  .btn.warn{border-color:var(--warn); color:#fbbf24}
+  .btn.danger{border-color:#ef4444; color:#fca5a5}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-top:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .stat{background:linear-gradient(180deg,var(--card),var(--panel-2));border:1px solid var(--border);border-radius:12px;padding:12px;min-width:140px}
+  .stat .label{color:var(--muted);font-size:12px}
+  .stat .value{font-size:22px;font-weight:800;letter-spacing:.3px}
+  .small{font-size:12px;color:var(--muted)}
+  .muted{color:var(--muted)}
+  /* Kalender */
+  .cal-header{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:10px}
+  .cal-nav{display:flex;gap:6px;align-items:center}
+  .month{font-weight:800;letter-spacing:.3px}
+  .today-pill{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:linear-gradient(180deg,var(--card),var(--panel-2));color:var(--muted)}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .cal-dow{font-size:12px;color:var(--muted);text-align:center;margin-bottom:6px}
+  .cal-cell{position:relative;border:1px solid var(--border);border-radius:14px;padding:10px;background:linear-gradient(180deg,var(--card),var(--panel-2));min-height:96px;display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;cursor:pointer;user-select:none;transition:.15s ease}
+  .cal-cell:hover{box-shadow:0 8px 24px rgba(0,0,0,.18);transform:translateY(-1px)}
+  .cal-cell .daynum{position:absolute;top:8px;left:10px;font-size:12px;color:var(--muted)}
+  .cal-cell .count{margin:auto;align-self:center;font-weight:900;font-size:34px;letter-spacing:.4px}
+  .cal-cell.dim{opacity:.42}
+  .cal-cell.today{outline:3px solid var(--info);box-shadow:0 0 0 4px rgba(96,165,250,.25) inset}
+  .cal-foot{position:absolute;bottom:8px;left:10px;right:10px;font-size:10px;color:var(--muted);display:flex;justify-content:space-between}
+
+  /* Drawer */
+  .hamburger{border:1px solid var(--border);border-radius:12px;padding:8px 10px;background:linear-gradient(180deg,var(--card),var(--panel-2));}
+  .drawer{position:fixed;inset:0;z-index:50;display:none}
+  .drawer.open{display:block}
+  .drawer .overlay{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+  .drawer .panel{position:absolute;top:0;bottom:0;left:0;width:min(90vw,430px);background:linear-gradient(180deg,var(--panel),var(--panel-2));border-right:1px solid var(--border);box-shadow:var(--shadow);transform:translateX(-100%);transition:transform .2s ease;display:flex;flex-direction:column}
+  .drawer.open .panel{transform:translateX(0)}
+  .drawer header{display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--border)}
+  .drawer .body{padding:10px 14px 18px 14px;overflow:auto}
+  details.sec{border:1px solid var(--border);border-radius:12px;margin:8px 0;background:linear-gradient(180deg,var(--card),var(--panel-2))}
+  details.sec>summary{list-style:none;cursor:pointer;padding:10px;display:flex;align-items:center;gap:8px}
+  details.sec>summary::-webkit-details-marker{display:none}
+  details.sec .inside{padding:10px;padding-top:0}
+  .icon{font-size:16px}
+
+  /* Charts */
+  .chart-card .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .chart-wrap{position:relative;width:100%;height:220px}
+  canvas.chart{width:100%;height:100%;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,var(--card),var(--panel-2))}
+  .legend{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+
+  /* Catalog */
+  .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+  .cat-item{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:12px;padding:10px;background:linear-gradient(180deg,var(--card),var(--panel-2))}
+  .cat-img{width:54px;height:54px;border-radius:10px;border:1px solid var(--border);background:#0f172a;object-fit:cover;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px}
+  .cat-meta{flex:1}
+  .cat-title{font-weight:800}
+  .cat-sub{font-size:12px;color:var(--muted)}
+  .form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  .file{font-size:12px}
+  .pill{font-size:11px;border:1px solid var(--border);border-radius:999px;padding:3px 8px;display:inline-block;background:linear-gradient(180deg,var(--card),var(--panel-2));color:#a6b0c2}
+  .hint{font-size:11px;color:var(--muted)}
+  .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:60;background:linear-gradient(180deg,#1f2937,#111827);color:#e5e7eb;border:1px solid #374151;border-radius:12px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.4);display:none}
+  .toast.show{display:block;animation:fadeSlide .8s ease}
+  @keyframes fadeSlide{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<div class="appbar">
+  <div class="container">
+    <header class="brand">
+      <div class="brand-left">
+        <button id="openDrawer" class="hamburger" title="Menü">☰</button>
+        <div class="logo">JT</div>
+        <div>
+          <h1>Joint Tracker</h1>
+          <div class="sub">v6.13 · CBD‑Katalog</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="btn ghost" id="themeToggle" title="Light/Dark umschalten">🌓</button>
+      </div>
+    </header>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Eingabe -->
+  <div class="card">
+    <div class="row">
+      <select id="method"><option>Joint</option><option>Vape</option><option>Bong</option><option>Pfeife</option></select>
+      <select id="profile" title="Profil">
+        <option value="THC">THC (nur THC)</option>
+        <option value="MIX">CBD + micro THC</option>
+        <option value="CBD">CBD (rein)</option>
+      </select>
+      <input id="qty" type="number" value="1" min="1" style="max-width:90px">
+      <input id="grams" type="number" placeholder="Gramm/J" step="0.01" style="max-width:120px">
+      <input id="pot" type="number" placeholder="THC %" step="0.5" style="max-width:110px">
+      <select id="productSel" title="CBD‑Produkt" style="min-width:180px">
+        <option value="">— Produkt (optional) —</option>
+      </select>
+      <input id="tag" placeholder="Tag (optional)">
+      <input id="note" placeholder="Bemerkung (optional)" style="min-width:180px">
+      <button class="btn primary" id="logBtn">+ Eintrag</button>
+    </div>
+    <div class="small" style="margin-top:6px">
+      Kosten werden aus **Gramm** × **Preis/g** berechnet. Wenn ein **Produkt** gewählt ist, wird dessen Preis/g verwendet, sonst der globale Preis/g aus dem Menü.
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card">
+    <div class="row" style="margin-top:8px">
+      <div class="stat"><div class="label">Heute · Joints</div><div class="value" id="todayQty">0</div></div>
+      <div class="stat"><div class="label">Heute · g</div><div class="value" id="todayGrams">0</div></div>
+      <div class="stat"><div class="label">Heute · CHF</div><div class="value" id="todayCost">0</div></div>
+      <div class="stat"><div class="label">30 Tage · CHF</div><div class="value" id="windowCost">0</div></div>
+      <div class="stat"><div class="label">Seit Ziel · Ersparnis</div><div class="value" id="savingsSince">–</div></div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="card chart-card">
+    <div class="head">
+      <strong>Trends (30 Tage)</strong>
+      <div class="legend"><span>• Gramm/Tag</span><span>• CHF/Tag</span><span id="avgLabel" class="muted">Ø</span></div>
+    </div>
+    <div class="chart-wrap"><canvas id="chartGrams" class="chart" width="1000" height="300"></canvas></div>
+    <div style="height:10px"></div>
+    <div class="chart-wrap"><canvas id="chartCHF" class="chart" width="1000" height="300"></canvas></div>
+    <div class="small" id="chartInfo"></div>
+  </div>
+
+  <!-- Kalender -->
+  <div class="card" id="calendarCard">
+    <div class="cal-header">
+      <div class="cal-nav">
+        <button class="btn" id="prevMonth">‹</button>
+        <div id="monthTitle" class="month"></div>
+        <button class="btn" id="nextMonth">›</button>
+      </div>
+      <div class="today-pill" id="todayPill">Heute: –</div>
+    </div>
+    <div class="cal-grid" id="dow">
+      <div class="cal-dow">Mo</div><div class="cal-dow">Di</div><div class="cal-dow">Mi</div><div class="cal-dow">Do</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div><div class="cal-dow">So</div>
+    </div>
+    <div class="cal-grid" id="cal"></div>
+  </div>
+
+  <!-- Liste -->
+  <div class="card" id="listCard">
+    <div style="font-weight:700;margin-bottom:6px">Letzte Einträge</div>
+    <div class="list" id="list" style="max-height:320px;overflow:auto"></div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer" id="drawer">
+  <div class="overlay" id="drawerOverlay"></div>
+  <div class="panel">
+    <header>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="logo" style="width:30px;height:30px;font-size:14px">JT</div>
+        <strong>Menü</strong>
+      </div>
+      <button class="btn badge" id="closeDrawer">Schließen</button>
+    </header>
+    <div class="body">
+
+      <!-- Ziele & Countdown -->
+      <details class="sec" open>
+        <summary><span class="icon">🎯</span><strong>Ziele & Countdown</strong></summary>
+        <div class="inside">
+          <div class="row">
+            <div style="flex:1">
+              <div class="small">Ziel: **THC-Stopp ab Datum**</div>
+              <input id="quitDate" type="date" style="width:100%">
+            </div>
+            <div>
+              <div class="small">Baseline g/Tag (optional)</div>
+              <input id="baselineGpd" type="number" step="0.01" placeholder="z. B. 0.5" style="width:140px">
+            </div>
+            <div>
+              <div class="small">Globaler Preis pro g (CHF)</div>
+              <input id="priceG" type="number" step="0.1" value="10" style="width:140px">
+            </div>
+            <button class="btn badge" id="saveGoals">Speichern</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <div class="stat"><div class="label">Tage seit Ziel</div><div class="value" id="daysSince">–</div></div>
+            <div class="stat"><div class="label">Aktueller THC‑frei Streak</div><div class="value" id="streakNow">0</div></div>
+            <div class="stat"><div class="label">Ziel Countdown</div><div class="value" id="goalCountdown">–</div></div>
+          </div>
+          <div class="small" id="goalHint">Setze ein Datum, ab dem du THC reduzieren/stoppen willst.</div>
+        </div>
+      </details>
+
+      <!-- CBD‑Katalog -->
+      <details class="sec" open>
+        <summary><span class="icon">🧾</span><strong>CBD‑Katalog (Produkte)</strong></summary>
+        <div class="inside">
+          <div class="form-row">
+            <input id="catName" placeholder="Produktname (z. B. 'CBD Lemon Haze')" style="flex:1;min-width:220px">
+            <input id="catPrice" type="number" step="0.1" placeholder="Preis pro g (CHF)" style="width:160px">
+            <label class="file"><input id="catImg" type="file" accept="image/*"> Bild (optional)</label>
+            <button class="btn badge" id="addProduct">+ Hinzufügen</button>
+          </div>
+          <div class="hint" style="margin-top:6px">Tipp: Lade ein Foto der Verpackung hoch. Preis/g wird beim Loggen automatisch genutzt, wenn du das Produkt auswählst.</div>
+          <div style="margin-top:8px" class="cat-grid" id="catalogList"></div>
+        </div>
+      </details>
+
+      <!-- Kosten & Ersparnis -->
+      <details class="sec" open>
+        <summary><span class="icon">💰</span><strong>Kosten & Ersparnis</strong></summary>
+        <div class="inside">
+          <div class="row">
+            <div class="stat"><div class="label">Gesamt (alle Zeiten)</div><div class="value" id="costTotal">0</div></div>
+            <div class="stat"><div class="label">Monat Ø/Tag</div><div class="value" id="costPerDay">0</div></div>
+            <div class="stat"><div class="label">Seit Ziel · gespart</div><div class="value" id="costSaved">–</div></div>
+          </div>
+          <div class="small">Kostenberechnung: **Gramm × Preis/g**. Priorität: gewähltes **Produkt** → sonst **globaler Preis/g**.</div>
+        </div>
+      </details>
+
+      <!-- Reflexions‑Journal -->
+      <details class="sec" open>
+        <summary><span class="icon">📝</span><strong>Reflexions‑Journal</strong></summary>
+        <div class="inside">
+          <div class="small">Tippe im Kalender einen Tag an, um **Journal & Stimmung** zu bearbeiten.</div>
+          <div id="journalPeek" class="small" style="margin-top:6px"></div>
+        </div>
+      </details>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal Day Details + Journal -->
+<div class="modal" id="modal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;z-index:45">
+  <div class="sheet" style="width:100%;max-height:80%;background:linear-gradient(180deg,var(--panel),var(--panel-2));border-top-left-radius:18px;border-top-right-radius:18px;border:1px solid var(--border);padding:14px;overflow:auto;box-shadow:var(--shadow)">
+    <header style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
+      <div id="modalTitle" style="font-weight:700"></div>
+      <button class="btn" id="closeModal">Schließen</button>
+    </header>
+    <div id="modalSummary" class="detail-summary" style="display:flex;gap:12px;flex-wrap:wrap;color:#cbd5e1;font-size:12px;margin-bottom:8px"></div>
+    <div id="modalBody"></div>
+    <div style="border-top:1px solid var(--border);margin:10px 0"></div>
+    <div>
+      <div class="row">
+        <div>
+          <div class="small">Stimmung</div>
+          <select id="moodSel">
+            <option value="">–</option>
+            <option>😊</option><option>🙂</option><option>😐</option><option>🙁</option><option>😣</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <div class="small">Journal / Reflexion</div>
+          <textarea id="journalText" class="journal" placeholder="Wie ging’s mir? Auslöser? Was hat geholfen?"></textarea>
+        </div>
+        <button class="btn badge" id="saveJournal">Journal speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Theme =====
+const themeKey='jt_theme';
+function applyTheme(t){document.documentElement.setAttribute('data-theme', t==='light'?'light':(t==='dark'?'dark':'auto'));try{localStorage.setItem(themeKey,t);}catch{}}
+(function(){applyTheme(localStorage.getItem(themeKey)||'auto')})();
+document.getElementById('themeToggle').onclick=()=>{const cur=document.documentElement.getAttribute('data-theme');applyTheme(cur==='light'?'dark':(cur==='dark'?'auto':'light'));};
+
+// ===== Data & Keys =====
+const KEY="jt_onefile_v3";
+const PRICE_KEY='jt_price_per_g';
+const QUIT_KEY='jt_quit_date';
+const BASELINE_KEY='jt_baseline_gpd';
+const JOURNAL_PREFIX='jt_journal_'; // + YYYY-MM-DD
+const CATALOG_KEY='jt_cbd_catalog_v1'; // array of {id,name,price,img?}
+const $=id=>document.getElementById(id);
+
+// Base store
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return []}}
+function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
+
+// Catalog store
+function loadCatalog(){ try{return JSON.parse(localStorage.getItem(CATALOG_KEY))||[]}catch{return []} }
+function saveCatalog(arr){ localStorage.setItem(CATALOG_KEY, JSON.stringify(arr||[])); }
+
+// Price/global & goals
+const pricePerG=()=> Number(localStorage.getItem(PRICE_KEY) ?? 10) || 10;
+const setPricePerG=v=> localStorage.setItem(PRICE_KEY, String(v));
+const getQuitDate=()=> localStorage.getItem(QUIT_KEY)||'';
+const setQuitDate=v=> v? localStorage.setItem(QUIT_KEY, v): localStorage.removeItem(QUIT_KEY);
+const getBaseline=()=> Number(localStorage.getItem(BASELINE_KEY)||0) || 0;
+const setBaseline=v=> v? localStorage.setItem(BASELINE_KEY,String(v)) : localStorage.removeItem(BASELINE_KEY);
+
+// Journal helpers
+const jKey=(yyyy_mm_dd)=> JOURNAL_PREFIX+yyyy_mm_dd;
+function getJournal(dateKey){ try{ return JSON.parse(localStorage.getItem(jKey(dateKey))||'{}'); }catch{return{}} }
+function setJournal(dateKey,obj){ localStorage.setItem(jKey(dateKey), JSON.stringify(obj||{})); }
+
+// ===== Helpers =====
+const dateKey=(d)=> d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,'0')+"-"+String(d.getDate()).padStart(2,'0');
+function monthTitle(y,m){const names=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];return names[m]+" "+y}
+
+// Toast
+function showToast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1800); }
+
+// ===== Eingabe & Product select =====
+function refreshProductSelect(){
+  const sel=$("productSel"); const cat=loadCatalog();
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Produkt (optional) —</option>';
+  cat.forEach(p=>{
+    const o=document.createElement('option'); o.value=p.id; o.textContent=p.name+" · CHF "+Number(p.price).toFixed(2)+"/g";
+    sel.appendChild(o);
+  });
+  if(cat.some(p=>p.id===cur)) sel.value=cur;
+}
+
+$("logBtn").onclick=()=>{
+  const e=load();
+  let tsDate=new Date();
+  const timeStr=($("time") && $("time").value) ? $("time").value : "";
+  if(timeStr){const[hh,mm]=timeStr.split(':').map(Number);tsDate.setHours(hh||0,mm||0,0,0);}
+  const productId=$("productSel").value || null;
+  const product = productId ? loadCatalog().find(p=>p.id===productId) : null;
+  const price = product ? Number(product.price) : pricePerG();
+  const gPerJoint = $("grams").value?Number($("grams").value):null;
+  e.push({id:crypto.randomUUID(),ts:tsDate.toISOString(),
+          method:$("method").value,profile:$("profile").value,qty:Number($("qty").value),
+          g:gPerJoint, p:$("pot").value?Number($("pot").value):null,
+          tag:$("tag").value||"",note:$("note").value||"",
+          productId, priceAtUse: price});
+  save(e);
+  $("tag").value="";$("note").value="";$("qty").value=1;if($("time")) $("time").value="";$("grams").value="";$("pot").value="";$("productSel").value="";
+  renderAll(); showToast("Eintrag gespeichert");
+};
+
+// Wenn Produkt gewählt → Hinweis auf Preis
+$("productSel").onchange=()=>{
+  const id=$("productSel").value; if(!id) return;
+  const p=loadCatalog().find(x=>x.id===id); if(p) showToast(`Preis aktiv: CHF ${Number(p.price).toFixed(2)}/g (${p.name})`);
+};
+
+// ===== Kalender & Aggregation =====
+let calYear, calMonth;
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate()}
+function dayIndexMon0(d){const wd=d.getDay();return (wd+6)%7}
+
+function totalsByMonth(y,m){
+  const map=new Map(); const ev=load();
+  const start=new Date(y,m,1,0,0,0,0); const end=new Date(y,m+1,0,23,59,59,999);
+  for(const e of ev){
+    const t=new Date(e.ts); if(t<start||t>end) continue;
+    const key=dateKey(t);
+    const grams = e.g? e.g*e.qty : 0;
+    const price = e.priceAtUse ?? pricePerG();
+    const prev = map.get(key)||{qty:0, grams:0, cost:0};
+    prev.qty += Number(e.qty||0);
+    prev.grams += grams;
+    prev.cost += grams * price;
+    map.set(key, prev);
+  }
+  return map;
+}
+
+function renderCalendar(){
+  $("monthTitle").textContent=monthTitle(calYear,calMonth);
+  const grid=$("cal");grid.innerHTML="";
+  const first=new Date(calYear,calMonth,1);
+  const firstIdx=dayIndexMon0(first);
+  const totalDays=daysInMonth(calYear,calMonth);
+  const prevMonthDays=daysInMonth(calYear,(calMonth+11)%12);
+  const todayK=dateKey(new Date());
+  const totals=totalsByMonth(calYear,calMonth);
+  for(let i=0;i<42;i++){
+    let dNum,inMonth=true,y=calYear,m=calMonth;
+    if(i<firstIdx){dNum=prevMonthDays-(firstIdx-1-i);inMonth=false;m=(calMonth+11)%12;y=m===11?calYear-1:calYear}
+    else if(i>=firstIdx+totalDays){dNum=(i-(firstIdx+totalDays))+1;inMonth=false;m=(calMonth+1)%12;y=m===0?calYear+1:calYear}
+    else{dNum=(i-firstIdx)+1}
+    const cell=document.createElement("div");cell.className="cal-cell";if(!inMonth)cell.classList.add("dim");
+    const key=dateKey(new Date(y,m,dNum)); if(key===todayK)cell.classList.add("today");
+    const t=totals.get(key)||{qty:0,grams:0,cost:0};
+    const dn=document.createElement("div");dn.className="daynum"; dn.textContent=dNum;
+    const count=document.createElement("div");count.className="count";count.textContent=inMonth?t.qty:"";
+    const foot=document.createElement("div");foot.className="cal-foot";foot.innerHTML = `<span>${inMonth? (t.grams? t.grams.toFixed(2)+' g':'' ):''}</span><span>${inMonth? (t.cost? 'CHF '+t.cost.toFixed(2):'') : ''}</span>`;
+    cell.appendChild(dn); cell.appendChild(count); cell.appendChild(foot);
+    if(inMonth){ cell.addEventListener("click",()=>openModalForDate(y,m,dNum)); }
+    grid.appendChild(cell);
+  }
+}
+$("prevMonth").onclick=()=>{calMonth--; if(calMonth<0){calMonth=11;calYear--;}; renderCalendar();};
+$("nextMonth").onclick=()=>{calMonth++; if(calMonth>11){calMonth=0;calYear++;}; renderCalendar();};
+
+// ===== Modal & Journal =====
+let modalDateKey=null;
+function openModalForDate(y,m,dNum){
+  const d=new Date(y,m,dNum); modalDateKey=dateKey(d);
+  const ev=load().filter(e=>dateKey(new Date(e.ts))===modalDateKey).sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  const qty=ev.reduce((s,e)=>s+Number(e.qty||0),0);
+  const grams=ev.reduce((s,e)=>s+(e.g?e.g*e.qty:0),0);
+  const cost=ev.reduce((s,e)=>{const price=e.priceAtUse ?? pricePerG(); const g=e.g?e.g*e.qty:0; return s + g*price;},0);
+  $("modalTitle").textContent=`Details · ${modalDateKey}`;
+  $("modalSummary").innerHTML=`<span>Σ Joints: <strong>${qty}</strong></span><span>Σ g: <strong>${grams.toFixed(2)}</strong></span><span>Σ Kosten: <strong>CHF ${cost.toFixed(2)}</strong></span>`;
+  const body=$("modalBody"); body.innerHTML="";
+  if(ev.length===0){ const p=document.createElement("div"); p.className="small"; p.textContent="Keine Einträge."; body.appendChild(p); }
+  const catalog=loadCatalog();
+  for(const e of ev){
+    const t=new Date(e.ts);
+    const prod = e.productId ? catalog.find(p=>p.id===e.productId) : null;
+    const g = e.g? (e.g*e.qty).toFixed(2)+' g' : '';
+    const price = e.priceAtUse ?? pricePerG();
+    const costLine = e.g ? `· CHF ${(Number(e.g*e.qty*price)).toFixed(2)}` : '';
+    const prodLine = prod ? `· <span class="pill">${prod.name} · CHF ${Number(prod.price).toFixed(2)}/g</span>` : '';
+    const div=document.createElement("div"); div.style.borderBottom='1px solid var(--border)'; div.style.padding='8px 0';
+    div.innerHTML = `<div><strong>${e.method}</strong> · ${(e.profile||'')||'—'} · ${e.qty}x ${g} ${costLine} ${prodLine}</div>
+                     <div class="small">${t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} ${e.tag?`· #${e.tag}`:``} ${e.note?`· ${e.note}`:``}</div>`;
+    body.appendChild(div);
+  }
+  // load journal
+  const j = getJournal(modalDateKey);
+  $("moodSel").value = j.mood || "";
+  $("journalText").value = j.text || "";
+  $("modal").style.display="flex";
+}
+$("closeModal").onclick=()=>{ $("modal").style.display='none'; };
+$("saveJournal").onclick=()=>{
+  if(!modalDateKey) return;
+  const mood=$("moodSel").value; const text=$("journalText").value.trim();
+  setJournal(modalDateKey, {mood, text});
+  showToast("Journal gespeichert"); $("modal").style.display='none'; renderJournalPeek();
+};
+
+// ===== Stats & Trends =====
+function updateTodayPill(){ const now=new Date(); const opts={weekday:'short', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}; $("todayPill").textContent = "Heute: " + now.toLocaleString([], opts); }
+function windowEvents(days=30){
+  const ev=load(); const cut=new Date(); cut.setDate(cut.getDate()-(days-1)); cut.setHours(0,0,0,0);
+  return ev.filter(e=> new Date(e.ts)>=cut);
+}
+function renderStats(){
+  const ev=load(); const today=new Date().toDateString();
+  let tq=0,tg=0,tc=0;
+  for(const e of ev){
+    const d=new Date(e.ts);
+    if(d.toDateString()===today){
+      tq+=Number(e.qty||0);
+      const g=e.g?e.g*e.qty:0; const price=e.priceAtUse ?? pricePerG();
+      tg+=g; tc+= g*price;
+    }
+  }
+  $("todayQty").textContent=tq; $("todayGrams").textContent=tg.toFixed(2); $("todayCost").textContent=tc.toFixed(2);
+  const wEv=windowEvents(30);
+  const wg=wEv.reduce((s,e)=>s+(e.g?e.g*e.qty:0),0);
+  const wc=wEv.reduce((s,e)=>{const price=e.priceAtUse ?? pricePerG(); const g=e.g?e.g*e.qty:0; return s+g*price;},0);
+  $("windowCost").textContent=wc.toFixed(2);
+  const allG = ev.reduce((s,e)=>s+(e.g?e.g*e.qty:0),0);
+  const allC = ev.reduce((s,e)=>{const price=e.priceAtUse ?? pricePerG(); const g=e.g?e.g*e.qty:0; return s+g*price;},0);
+  $("costTotal").textContent = allC.toFixed(2);
+  $("costPerDay").textContent = (wc/30).toFixed(2);
+}
+
+// THC-free streak (CBD als clean)
+function thcFreeStreak(){
+  const ev=load().slice().sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  let current=0;
+  if(ev.length===0) return 0;
+  const map=new Map();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const first=new Date(ev[0].ts); first.setHours(0,0,0,0);
+  for(let d=new Date(first); d<=today; d.setDate(d.getDate()+1)){
+    map.set(dateKey(d), {thc:false, any:false});
+  }
+  for(const e of ev){
+    const k=dateKey(new Date(e.ts));
+    const rec=map.get(k)||{thc:false, any:false};
+    rec.any=true; rec.thc = rec.thc || ((e.profile||'THC')!=='CBD');
+    map.set(k, rec);
+  }
+  for(let d=new Date(today); ; d.setDate(d.getDate()-1)){
+    const r=map.get(dateKey(d));
+    if(!r) break;
+    if(r.any && !r.thc){ current++; } else if(!r.any){ current++; } else break;
+    if(dateKey(d)===dateKey(first)) break;
+  }
+  return current;
+}
+
+// Goals & savings
+function renderGoals(){
+  const q=$("quitDate").value = getQuitDate();
+  $("priceG").value = pricePerG();
+  $("baselineGpd").value = (getBaseline() || '');
+  let daysSince='–', countdown='–';
+  if(q){
+    const d=new Date(q); const today=new Date(); d.setHours(0,0,0,0); today.setHours(0,0,0,0);
+    const diff = Math.round((today-d)/86400000);
+    if(diff>=0){ daysSince = diff; countdown = "läuft"; }
+    else { daysSince = "–"; countdown = (Math.abs(diff))+" Tage"; }
+  }
+  $("daysSince").textContent = daysSince;
+  $("goalCountdown").textContent = countdown;
+  $("streakNow").textContent = thcFreeStreak();
+  // Savings since goal date with optional baseline g/day
+  const since = q ? new Date(q+"T00:00:00") : null;
+  if(since){
+    const ev=load().filter(e=> new Date(e.ts)>=since);
+    const grams=ev.reduce((s,e)=>s+(e.g?e.g*e.qty:0),0);
+    const days = Math.max(1, Math.round((new Date().setHours(0,0,0,0) - since.setHours(0,0,0,0))/86400000)+1);
+    const baseline = getBaseline();
+    if(baseline>0){
+      // Für Ersparnis nutzen wir Durchschnitts-Preis in diesem Zeitraum (gew. Produkte). Zur Vereinfachung nehmen wir globalen Preis.
+      const expected = baseline * days * pricePerG();
+      const actual = ev.reduce((s,e)=>{const price=e.priceAtUse ?? pricePerG(); const g=e.g?e.g*e.qty:0; return s+g*price;},0);
+      const saved = expected - actual;
+      $("savingsSince").textContent = "CHF " + saved.toFixed(2);
+      $("costSaved").textContent = "CHF " + saved.toFixed(2);
+    } else {
+      $("savingsSince").textContent = "—";
+      $("costSaved").textContent = "—";
+    }
+  } else {
+    $("savingsSince").textContent = "—";
+    $("costSaved").textContent = "—";
+  }
+}
+$("saveGoals").onclick=()=>{
+  const q=$("quitDate").value; const p=Number($("priceG").value||10); const b=Number($("baselineGpd").value||0);
+  if(q) setQuitDate(q); else setQuitDate('');
+  setPricePerG(p); if(b>0) setBaseline(b); else setBaseline('');
+  showToast("Ziele/Kosten gespeichert"); renderAll();
+};
+
+// Journal Peek (letzte 7 Tage)
+function renderJournalPeek(){
+  const out=[]; for(let i=0;i<7;i++){ const d=new Date(); d.setDate(d.getDate()-i); const k=dateKey(d); const j=getJournal(k); if(j.mood||j.text){ out.push(`${k}: ${j.mood||''} ${j.text?('· '+j.text.slice(0,60)+(j.text.length>60?'…':'')) : ''}`); } }
+  $("journalPeek").innerHTML = out.length? out.map(s=>`• ${s}`).join('<br>') : 'Noch keine Journal‑Einträge.';
+}
+
+// ===== List =====
+function renderList(){
+  const list=$("list"); list.innerHTML="";
+  let ev=load().slice().reverse();
+  if(ev.length===0){ const p=document.createElement("div"); p.className="small"; p.textContent="Keine Einträge."; list.appendChild(p); return; }
+  const catalog=loadCatalog();
+  for(const e of ev.slice(0,150)){
+    const d=new Date(e.ts);
+    const grams=e.g? (e.g*e.qty).toFixed(2)+' g · ' : '';
+    const price=e.priceAtUse ?? pricePerG();
+    const cost=e.g? 'CHF '+(e.g*e.qty*price).toFixed(2) : '';
+    const prod = e.productId ? catalog.find(p=>p.id===e.productId) : null;
+    const prodStr = prod ? ` · <span class="pill">${prod.name}</span>` : '';
+    const div=document.createElement("div"); div.style.borderBottom='1px solid var(--border)'; div.style.padding='8px 0';
+    div.innerHTML = `<div><strong>${e.method}</strong> · ${(e.profile||'')||'—'} · ${e.qty}x ${grams}${cost}${prodStr}</div>
+                     <div class="small">${d.toLocaleString()} ${e.tag?`· #${e.tag}`:``} ${e.note?`· ${e.note}`:``}</div>`;
+    list.appendChild(div);
+  }
+}
+
+// ===== Charts (wie 6.12, mit produkt-spezifischem Preis) =====
+function drawLineChart(canvas, data, labelLeft, colorLine, colorAvg){
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#0b1329'); bg.addColorStop(1,'#0f172a'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  const padL=40, padR=10, padT=18, padB=32;
+  const innerW=W-padL-padR, innerH=H-padT-padB;
+  const maxVal=Math.max(1, Math.max(...data.map(v=>v.value)));
+  const avg = data.reduce((s,v)=>s+v.value,0)/Math.max(1,data.length);
+  function yToPx(v){ return padT + innerH - (v/maxVal)*innerH; }
+  function xToPx(i){ return padL + (i/(data.length-1))*innerW; }
+  // axes
+  const gridC='rgba(148,163,184,.2)';
+  const axisC='#1f2a4a';
+  // axes
+  ctx.strokeStyle=axisC; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT+innerH); ctx.lineTo(padL+innerW, padT+innerH); ctx.stroke();
+  ctx.strokeStyle=gridC;
+  for(let g=1; g<=4; g++){ const y=padT+innerH*(1-g/4); ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+innerW,y); ctx.stroke(); }
+  ctx.fillStyle='#94a3b8'; ctx.font='12px -apple-system,system-ui,Inter,Arial';
+  ctx.fillText('0', 6, padT+innerH+4);
+  ctx.fillText(maxVal.toFixed(2), 6, padT+10);
+  ctx.fillText(labelLeft, 6, padT-4);
+  const step=Math.ceil(data.length/6);
+  for(let i=0;i<data.length;i+=step){
+    const x=xToPx(i); const d=new Date(data[i].date);
+    const lab=(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0');
+    ctx.fillText(lab, x-12, padT+innerH+20);
+  }
+  // avg
+  ctx.strokeStyle=colorAvg; ctx.setLineDash([6,6]);
+  ctx.beginPath(); ctx.moveTo(padL, yToPx(avg)); ctx.lineTo(padL+innerW, yToPx(avg)); ctx.stroke(); ctx.setLineDash([]);
+  // line
+  ctx.strokeStyle=colorLine; ctx.lineWidth=2;
+  ctx.beginPath();
+  data.forEach((pt,i)=>{ const x=xToPx(i), y=yToPx(pt.value); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+  ctx.stroke();
+  // points
+  ctx.fillStyle=colorLine;
+  data.forEach((pt,i)=>{ const x=xToPx(i), y=yToPx(pt.value); ctx.beginPath(); ctx.arc(x,y,2.2,0,Math.PI*2); ctx.fill(); });
+}
+
+function totalsByDayRange(days=30){
+  const arr=[];
+  const ev=load();
+  const today=new Date(); today.setHours(0,0,0,0);
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const k=dateKey(d); arr.push({k, grams:0, chf:0});
+  }
+  for(const e of ev){
+    const t=new Date(e.ts); t.setHours(0,0,0,0);
+    const k=dateKey(t);
+    const rec = arr.find(x=>x.k===k);
+    if(!rec) continue;
+    const grams = e.g ? e.g*e.qty : 0;
+    const price = e.priceAtUse ?? pricePerG();
+    rec.grams += grams;
+    rec.chf += grams * price;
+  }
+  return arr;
+}
+
+function buildChartData(){
+  const arr=totalsByDayRange(30);
+  const grams=arr.map(x=>({date:new Date(x.k), value: Number(x.grams.toFixed(3)) }));
+  const chf=arr.map(x=>({date:new Date(x.k), value: Number(x.chf.toFixed(2)) }));
+  return {grams,chf};
+}
+
+function renderCharts(){
+  const {grams,chf}=buildChartData();
+  const c1=$("chartGrams"), c2=$("chartCHF");
+  c1.width=c1.clientWidth*2; c1.height=300*2; c2.width=c2.clientWidth*2; c2.height=300*2;
+  drawLineChart(c1, grams, "g/Tag", "#34d399", "#94a3b8");
+  drawLineChart(c2, chf, "CHF/Tag", "#60a5fa", "#94a3b8");
+  const avgG = (grams.reduce((s,v)=>s+v.value,0)/Math.max(1,grams.length)).toFixed(2);
+  const avgC = (chf.reduce((s,v)=>s+v.value,0)/Math.max(1,chf.length)).toFixed(2);
+  $("chartInfo").textContent = `Durchschnitt (30 Tage): ${avgG} g/Tag · CHF ${avgC}/Tag`;
+}
+
+// ===== Catalog management =====
+function renderCatalog(){
+  const list=$("catalogList"); list.innerHTML='';
+  const arr=loadCatalog();
+  if(arr.length===0){
+    const p=document.createElement('div'); p.className='small'; p.textContent='Noch keine Produkte. Füge oben ein Produkt hinzu.'; list.appendChild(p); return;
+  }
+  arr.forEach(p=>{
+    const item=document.createElement('div'); item.className='cat-item';
+    const img=document.createElement('img'); img.className='cat-img'; img.alt=p.name; if(p.img){ img.src=p.img; } else { img.style.objectFit='contain'; img.src=''; img.alt='Kein Bild'; img.style.padding='10px'; img.style.background='#0f172a'; img.style.color='#94a3b8'; img.style.display='flex'; }
+    const meta=document.createElement('div'); meta.className='cat-meta';
+    const title=document.createElement('div'); title.className='cat-title'; title.textContent=p.name;
+    const sub=document.createElement('div'); sub.className='cat-sub'; sub.textContent = `CHF ${Number(p.price).toFixed(2)}/g · ID ${p.id.slice(0,6)}`;
+    const actions=document.createElement('div'); actions.className='form-row';
+    const btnUse=document.createElement('button'); btnUse.className='btn badge'; btnUse.textContent='Als Standard wählen'; btnUse.onclick=()=>{ localStorage.setItem('jt_default_product', p.id); showToast('Standardprodukt gesetzt: '+p.name); refreshProductSelect(); };
+    const btnEdit=document.createElement('button'); btnEdit.className='btn warn'; btnEdit.textContent='Bearbeiten'; btnEdit.onclick=()=>editProduct(p.id);
+    const btnDel=document.createElement('button'); btnDel.className='btn danger'; btnDel.textContent='Löschen'; btnDel.onclick=()=>{ if(confirm('Produkt löschen?')){ const arr=loadCatalog().filter(x=>x.id!==p.id); saveCatalog(arr); renderCatalog(); refreshProductSelect(); showToast('Produkt gelöscht'); } };
+    actions.append(btnUse, btnEdit, btnDel);
+    meta.append(title, sub, actions);
+    item.append(img, meta);
+    list.appendChild(item);
+  });
+}
+
+function editProduct(id){
+  const arr=loadCatalog(); const p=arr.find(x=>x.id===id); if(!p) return;
+  const name=prompt('Neuer Name:', p.name)||p.name;
+  const priceStr=prompt('Neuer Preis pro g (CHF):', String(p.price))||String(p.price);
+  const price=Number(priceStr||p.price);
+  p.name=name; p.price=price;
+  saveCatalog(arr); renderCatalog(); refreshProductSelect(); showToast('Produkt aktualisiert');
+}
+
+$("addProduct").onclick=()=>{
+  const name=$("catName").value.trim(); const price=Number($("catPrice").value||0);
+  if(!name || !price){ showToast('Bitte Name & Preis/g ausfüllen'); return; }
+  const file=$("catImg").files[0];
+  const id=crypto.randomUUID();
+  const put=(imgData)=>{
+    const arr=loadCatalog(); arr.push({id,name,price,img:imgData||null}); saveCatalog(arr);
+    $("catName").value=''; $("catPrice").value=''; $("catImg").value='';
+    renderCatalog(); refreshProductSelect(); showToast('Produkt hinzugefügt');
+  };
+  if(file){
+    const reader=new FileReader(); reader.onload=()=>put(reader.result); reader.readAsDataURL(file);
+  }else{
+    put(null);
+  }
+};
+
+// ===== Charts helper =====
+function totalsByDayRange(days=30){
+  const arr=[];
+  const ev=load();
+  const today=new Date(); today.setHours(0,0,0,0);
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const k=dateKey(d); arr.push({k, grams:0, chf:0});
+  }
+  for(const e of ev){
+    const t=new Date(e.ts); t.setHours(0,0,0,0);
+    const k=dateKey(t);
+    const rec = arr.find(x=>x.k===k);
+    if(!rec) continue;
+    const grams = e.g ? e.g*e.qty : 0;
+    const price = e.priceAtUse ?? pricePerG();
+    rec.grams += grams;
+    rec.chf += grams * price;
+  }
+  return arr;
+}
+
+// ===== Charts render (reusing functions) =====
+function renderChartsWrap(){
+  const c1=$("chartGrams"), c2=$("chartCHF");
+  c1.width=c1.clientWidth*2; c1.height=300*2; c2.width=c2.clientWidth*2; c2.height=300*2;
+  const arr=totalsByDayRange(30);
+  const grams=arr.map(x=>({date:new Date(x.k), value: Number(x.grams.toFixed(3)) }));
+  const chf=arr.map(x=>({date:new Date(x.k), value: Number(x.chf.toFixed(2)) }));
+  drawLineChart(c1, grams, "g/Tag", "#34d399", "#94a3b8");
+  drawLineChart(c2, chf, "CHF/Tag", "#60a5fa", "#94a3b8");
+  const avgG = (grams.reduce((s,v)=>s+v.value,0)/Math.max(1,grams.length)).toFixed(2);
+  const avgC = (chf.reduce((s,v)=>s+v.value,0)/Math.max(1,chf.length)).toFixed(2);
+  $("chartInfo").textContent = `Durchschnitt (30 Tage): ${avgG} g/Tag · CHF ${avgC}/Tag`;
+}
+
+// ===== Drawer logic =====
+const drawer=$("drawer"), openBtn=$("openDrawer"), closeBtn=$("closeDrawer"), overlay=$("drawerOverlay");
+function openDrawer(){drawer.classList.add('open'); document.body.style.overflow='hidden';}
+function closeDrawer(){drawer.classList.remove('open'); document.body.style.overflow='';}
+openBtn.onclick=openDrawer; closeBtn.onclick=closeDrawer; overlay.onclick=closeDrawer;
+
+// ===== Render All =====
+function renderAll(){
+  updateTodayPill();
+  renderCalendar();
+  renderList();
+  renderStats();
+  renderGoals();
+  renderJournalPeek();
+  renderChartsWrap();
+  renderCatalog();
+  refreshProductSelect();
+  // set default product if any
+  const def=localStorage.getItem('jt_default_product'); if(def && !$("productSel").value){ $("productSel").value=def; }
+}
+(function init(){
+  const now=new Date(); calYear=now.getFullYear(); calMonth=now.getMonth();
+  document.addEventListener("DOMContentLoaded", renderAll);
+  window.addEventListener('resize', ()=>{ renderChartsWrap(); });
+  setInterval(updateTodayPill, 30*1000);
+})();
+</script>
+</body>
+</html>
