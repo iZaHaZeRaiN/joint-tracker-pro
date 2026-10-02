@@ -1,4 +1,4 @@
-name: Gate 1 — FluentAuth precision replay v0.5
+name: Gate 1 — MainWP Child 6.1.2 security delta
 
 on:
   workflow_dispatch:
@@ -18,11 +18,11 @@ jobs:
       - name: Checkout harness branch
         uses: actions/checkout@v5
 
-      - name: Checkout FluentAuth 3.0.0
+      - name: Checkout MainWP Child 6.1.2 security delta
         shell: bash
         run: |
-          git clone https://github.com/WPManageNinja/fluent-security.git fluent-security
-          git -C fluent-security checkout 34c292780a19dbdc1e49fc972949a1c3818ca90a
+          git clone https://github.com/mainwp/mainwp-child.git mainwp-child
+          git -C mainwp-child checkout 75dcd23413cb530cff050dc2701647cd6993fbd6
 
       - name: Run Release Preflight v0.5 precision logic
         shell: bash
@@ -31,8 +31,8 @@ jobs:
           import json, re, subprocess
           from pathlib import Path
 
-          REPO = Path('fluent-security')
-          BASE = 'e8abf79e274d126b61eecf6c3f5e2f32418c944d'
+          REPO = Path('mainwp-child')
+          BASE = 'cb0bad5c34cb78a676f134ccb68bae98b91d8a88'
           HEAD = 'HEAD'
 
           def git(*args):
@@ -158,7 +158,7 @@ jobs:
             --extensions=php \
             --ignore='*/vendor/*,*/node_modules/*' \
             --report=json \
-            fluent-security > gate1-wpcs.json
+            mainwp-child > gate1-wpcs.json
           echo "WPCS_EXIT=$?" >> "$GITHUB_ENV"
           set -e
           python3 - <<'PY'
@@ -186,14 +186,14 @@ jobs:
         continue-on-error: true
         uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: ./fluent-security
+          build-dir: ./mainwp-child
           strict: false
 
       - name: Upload Gate 1 comparison artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gate1-fluentauth-v05-precision
+          name: gate1-mainwp-612-security-delta
           path: |
             gate1-preflight.md
             gate1-preflight.json
