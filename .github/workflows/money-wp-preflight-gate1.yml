@@ -21,8 +21,8 @@ jobs:
       - name: Checkout ShortPixel 6.4.3
         shell: bash
         run: |
-          git clone https://github.com/short-pixel-optimizer/shortpixel-image-optimiser.git target-plugin
-          git -C target-plugin checkout c84d97581ae95f1a8c16f0e6eb1a0715b1a5cd56
+          git clone https://github.com/short-pixel-optimizer/shortpixel-image-optimiser.git shortpixel-image-optimiser
+          git -C shortpixel-image-optimiser checkout c84d97581ae95f1a8c16f0e6eb1a0715b1a5cd56
 
       - name: Run Release Preflight v0.3 benchmark logic
         shell: bash
@@ -31,7 +31,7 @@ jobs:
           import json, re, subprocess
           from pathlib import Path
 
-          REPO = Path('target-plugin')
+          REPO = Path('shortpixel-image-optimiser')
           BASE = 'b03f2293515e5555f3869991f78aa39abede6f2c'
           HEAD = 'HEAD'
 
@@ -138,19 +138,37 @@ jobs:
           set +e
           vendor/bin/phpcs \
             --standard=WordPress \
-            --sniffs=WordPress.Security \
             --extensions=php \
             --ignore='*/vendor/*,*/node_modules/*' \
             --report=json \
-            target-plugin > gate1-wpcs.json
+            shortpixel-image-optimiser > gate1-wpcs.json
           echo "WPCS_EXIT=$?" >> "$GITHUB_ENV"
           set -e
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('gate1-wpcs.json')
+          try:
+              data=json.loads(p.read_text())
+          except Exception as e:
+              Path('gate1-wpcs-security-summary.json').write_text(json.dumps({'parse_error':str(e)},indent=2))
+              raise SystemExit(0)
+          out={'totals':data.get('totals',{}),'security_messages':[]}
+          for fn,info in data.get('files',{}).items():
+              for m in info.get('messages',[]):
+                  if str(m.get('source','')).startswith('WordPress.Security'):
+                      out['security_messages'].append({'file':fn,**m})
+          out['security_count']=len(out['security_messages'])
+          out['bulkcontroller_security']=[m for m in out['security_messages'] if 'BulkController.php' in m['file']]
+          Path('gate1-wpcs-security-summary.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps({'totals':out['totals'],'security_count':out['security_count'],'bulkcontroller_security':out['bulkcontroller_security']},indent=2))
+          PY
 
       - name: Run official WordPress Plugin Check
         if: always()
         uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: ./target-plugin
+          build-dir: ./shortpixel-image-optimiser
           strict: false
 
       - name: Upload Gate 1 comparison artifacts
@@ -162,4 +180,5 @@ jobs:
             gate1-preflight.md
             gate1-preflight.json
             gate1-wpcs.json
+            gate1-wpcs-security-summary.json
           if-no-files-found: warn
