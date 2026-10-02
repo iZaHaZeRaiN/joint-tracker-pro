@@ -1,0 +1,89 @@
+name: Money Scout - Superteam agent discovery
+
+on:
+  push:
+    branches:
+      - money-superteam-discovery
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Register ephemeral agent and fetch agent-eligible bounties
+        shell: bash
+        run: |
+          set -euo pipefail
+          CERT_FILE="$(mktemp)"
+          REGISTER_FILE="$(mktemp)"
+          LISTINGS_FILE="$(mktemp)"
+          ENC_FILE="$(mktemp)"
+
+          cat > "$CERT_FILE" <<'CERT'
+-----BEGIN CERTIFICATE-----
+MIIDKTCCAhGgAwIBAgIUfgGFAsyQrS0849tGBHoGhucMc6kwDQYJKoZIhvcNAQEL
+BQAwJDEiMCAGA1UEAwwZc3VwZXJ0ZWFtLWFnZW50LWRpc2NvdmVyeTAeFw0yNjEw
+MDIxMzIzNDdaFw0yNjEwMDQxMzIzNDdaMCQxIjAgBgNVBAMMGXN1cGVydGVhbS1h
+Z2VudC1kaXNjb3ZlcnkwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDe
+nXPhZ4A8Nko1Fs+/AF8Zd+GS29G6UHaCyi/HNxfahGdKgUh+Hhhtvmrdns/drToM
+fI0haQY/u/WwSvn0SoYerAk23RS5CMH7ga1BX19qOzXODKo/3Ix0VGPk7OCj+R+k
+ytyf5Qd1JHlJeTrvZS6Ov9ajKpBVd+Tvgs+QcB1SNbMuQYY4ZOdQ1nEeldYKJvSH
+ZVoEypvoZM5V+bDUYSSETxeu3ck8p9oQXBKgCpDfF5s5mz+1c0QcAvu+KEPID44X
+ZpOa6Fs3nWzlH5glsZ7iv6vXofJtxTkp/w1qQVGv1YGAaPO7F0yvi1lKL7FxZWb+
+MLCc2nTAC8chm8zhLIq5AgMBAAGjUzBRMB0GA1UdDgQWBBStx0P30HE1+NdGZDxf
+Gpm1Kh2CUzAfBgNVHSMEGDAWgBStx0P30HE1+NdGZDxfGpm1Kh2CUzAPBgNVHRMB
+Af8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQBdT9eipHwo3N8tGPRzFWqXs6Z6
++dFXjQsgDcYkLN1qvTmtRzhjfteXLn9CjIldlEOUTcU6TWf5N5O+3dL2GLY7wY7t
+DNzl02gzyjsXSl0IofuraUEzYpyjKCPm72wxxNlp5myi5NXq3KWCMX6Jrqdvdtue
+N2aBS25XDjd6ICSX3+3Cxet0+t0prfMGCqLSjYRTFnD3RAOG/AA6xFxM9cCRUhVx
+KnfUNjfkD0R6CTjWsalNjtoo86LBzdd9O++abO6zMhT9NgCbFMkxUqkLS9kJq22f
+Il694qJR0ev2xDgSWE1Ko9wm+cFda8V7EuYmJcKV7nW5f5DIlvHl8ZbKmc9o
+-----END CERTIFICATE-----
+CERT
+
+          AGENT_NAME="money-scout-${GITHUB_RUN_ID}"
+          python3 - "$AGENT_NAME" > /tmp/register-body.json <<'PY'
+import json, sys
+print(json.dumps({"name": sys.argv[1]}))
+PY
+
+          curl -fsS -X POST "https://superteam.fun/api/agents" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/register-body.json \
+            > "$REGISTER_FILE"
+
+          API_KEY="$(python3 - "$REGISTER_FILE" <<'PY'
+import json, sys
+obj=json.load(open(sys.argv[1]))
+def find_key(o):
+    if isinstance(o, dict):
+        if isinstance(o.get("apiKey"), str):
+            return o["apiKey"]
+        for v in o.values():
+            r=find_key(v)
+            if r: return r
+    elif isinstance(o, list):
+        for v in o:
+            r=find_key(v)
+            if r: return r
+    return None
+key=find_key(obj)
+if not key:
+    raise SystemExit("apiKey missing from registration response")
+print(key)
+PY
+)"
+
+          curl -fsS "https://superteam.fun/api/agents/listings/live?take=100&deadline=2026-12-31&type=bounty" \
+            -H "Authorization: Bearer $API_KEY" \
+            > "$LISTINGS_FILE"
+
+          openssl cms -encrypt -aes256 -binary \
+            -in "$LISTINGS_FILE" -outform DER -out "$ENC_FILE" "$CERT_FILE"
+
+          echo "SUPERTEAM_LISTINGS_ENCRYPTED_BEGIN"
+          base64 -w0 "$ENC_FILE"
+          echo
+          echo "SUPERTEAM_LISTINGS_ENCRYPTED_END"
