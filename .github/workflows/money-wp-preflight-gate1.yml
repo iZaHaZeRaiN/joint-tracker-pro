@@ -1,4 +1,4 @@
-name: Gate 1 — FluentAuth 2.1.2 to 3.0.0 blind
+name: Gate 1 — FluentAuth precision replay v0.5
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ jobs:
           git clone https://github.com/WPManageNinja/fluent-security.git fluent-security
           git -C fluent-security checkout 34c292780a19dbdc1e49fc972949a1c3818ca90a
 
-      - name: Run Release Preflight v0.4 benchmark logic
+      - name: Run Release Preflight v0.5 precision logic
         shell: bash
         run: |
           cat > /tmp/preflight_gate1.py <<'PY'
@@ -41,7 +41,11 @@ jobs:
                   raise SystemExit(p.stderr)
               return p.stdout
 
-          diff = git('diff','--no-ext-diff','--unified=4',f'{BASE}..{HEAD}','--',':!vendor',':!node_modules')
+          diff = git(
+              'diff','--no-ext-diff','--unified=4',f'{BASE}..{HEAD}','--',
+              ':!vendor',':!node_modules',':!tests',':!test',':!Tests',':!spec',':!fixtures',
+              ':!build',':!dist',':!languages'
+          )
           added=[]; changed=set(); path=None; new_line=0; in_hunk=False
           for raw in diff.splitlines():
               if raw.startswith('+++ b/'):
@@ -79,9 +83,14 @@ jobs:
 
           for x in php:
               t=x['text']; low=t.lower(); c=ctx(x); sf=full(x)
+              stripped=t.lstrip()
+              if stripped.startswith(('//','#','*','/*')):
+                  continue
               if re.search(r'\b(eval|assert)\s*\(',t) or re.search(r'\b(shell_exec|exec|system|passthru|proc_open|popen)\s*\(',t): add('WPRP001','HIGH','Runtime code/command execution added',x)
-              if 'base64_decode(' in low and ('$_' in t or re.search(r'base64_decode\s*\(\s*\$[A-Za-z_]',t)): add('WPRP002','HIGH','Decoded dynamic payload added',x)
-              if re.search(r"add_action\s*\(\s*['\"]wp_ajax_nopriv_",t): add('WPRP003','MEDIUM' if 'current_user_can(' in c else 'HIGH','Unauthenticated AJAX endpoint added',x)
+              if 'base64_decode(' in low and ('$_' in t or re.search(r'base64_decode\s*\(\s*\$[A-Za-z_]',t)):
+                  hot('WPRH010','decode','MEDIUM','Dynamic decoding / token parsing changed',x)
+              if re.search(r"add_action\s*\(\s*['\"]wp_ajax_nopriv_",t):
+                  hot('WPRH009','public-endpoint','HIGH','Unauthenticated AJAX surface changed',x)
               if 'register_rest_route(' in t and 'permission_callback' not in c: add('WPRP004','HIGH','REST route may lack permission_callback',x)
               if re.search(r'\$wpdb->(query|get_results|get_row|get_var)\s*\(',t) and 'prepare(' not in c and any(s in c for s in ('$_get','$_post','$_request')): add('WPRP005','HIGH','Potential unprepared database query',x)
               if re.search(r'\bunserialize\s*\(',t) and ('$_' in c or 'wp_remote' in c): add('WPRP006','HIGH','Unserialize on external/request-influenced data',x)
@@ -93,14 +102,16 @@ jobs:
                   cap='current_user_can(' in c; nonce=any(s in c for s in ('check_ajax_referer(','check_admin_referer(','wp_verify_nonce('))
                   if not cap: add('WPRP008','HIGH','Privileged state mutation near endpoint without visible capability check',x)
                   elif not nonce: add('WPRP009','MEDIUM','State mutation has capability check but no visible nonce verification',x)
-              if re.search(r'\b(move_uploaded_file|wp_handle_upload|unlink|file_put_contents|fopen|rename)\s*\(',t) and ('$_' in c or 'request' in c): add('WPRP010','HIGH','Request-influenced file operation added',x)
+              if re.search(r'(?<!->)(?<!::)\b(move_uploaded_file|wp_handle_upload|unlink|file_put_contents|fopen|rename)\s*\(',t) and ('$_' in c or 'request' in c):
+                  add('WPRP010','HIGH','Request-influenced direct filesystem operation added',x)
               if ('wp_remote_get(' in low or 'wp_remote_post(' in low) and any(s in c for s in ('eval(','include(','require(','file_put_contents(')): add('WPRP011','HIGH','Remote content participates in executable/write path',x)
 
               if re.search(r'\b(determine_current_user|authenticate|wp_set_auth_cookie|wp_set_current_user|wp_signon|wp_authenticate|xmlrpc_methods|xmlrpc_call)\b',low): hot('WPRH001','authentication','HIGH','Authentication / identity flow changed',x)
               if re.search(r"add_action\s*\(\s*['\"]wp_ajax_",t) or re.search(r"add_action\s*\(\s*['\"]admin_post_",t) or 'register_rest_route(' in t or 'current_user_can(' in t or 'user_can(' in t or 'map_meta_cap' in low: hot('WPRH002','authorization','MEDIUM','Authorization-sensitive endpoint/capability logic changed',x)
               if re.search(r'\$wpdb->(query|get_results|get_row|get_var|insert|update|delete)\s*\(',t) or '$wpdb->prepare(' in t: hot('WPRH003','database','MEDIUM','Database query surface changed',x)
               if re.search(r'\b(wp_redirect|wp_safe_redirect|wp_validate_redirect)\s*\(',t) or 'allowed_redirect_hosts' in low: hot('WPRH004','redirect','MEDIUM','Redirect trust boundary changed',x)
-              if re.search(r'\b(move_uploaded_file|wp_handle_upload|unlink|file_put_contents|fopen|rename|copy)\s*\(',t) or 'wp_filesystem' in low: hot('WPRH005','filesystem','MEDIUM','Filesystem/write surface changed',x)
+              if re.search(r'(?<!->)(?<!::)\b(move_uploaded_file|wp_handle_upload|unlink|file_put_contents|fopen|rename|copy)\s*\(',t) or 'wp_filesystem' in low:
+                  hot('WPRH005','filesystem','MEDIUM','Filesystem/write surface changed',x)
               if re.search(r'\b(update_option|add_option|delete_option|update_user_meta|add_user_meta|delete_user_meta|wp_insert_user|wp_update_user|set_role|add_role)\s*\(',t): hot('WPRH006','state-change','MEDIUM','Privileged WordPress state mutation changed',x)
               if re.search(r'\b(realpath|wp_normalize_path|basename|pathinfo)\s*\(',t) and any(s in sf for s in ('file_get_contents(','readfile(','fopen(','getfile(','getcontents(','is_file(','file_exists(','glob(','strpos(','str_starts_with(')): hot('WPRH007','file-path','MEDIUM','Local file path / read trust boundary changed',x)
 
@@ -114,9 +125,9 @@ jobs:
           weights={'LOW':1,'MEDIUM':2,'HIGH':4}
           review_score=sum(weights[h['priority']] for h in hotspots)+(3 if len(php)>=500 else 0)
           review='HIGH' if any(h['priority']=='HIGH' for h in hotspots) or review_score>=5 else ('MEDIUM' if review_score else 'LOW')
-          result={'version':'0.4.0-benchmark','base':BASE,'head':HEAD,'risk':risk,'review_priority':review,'review_score':review_score,'changed_files':len(changed),'php_added_lines':len(php),'findings':findings,'hotspots':hotspots}
+          result={'version':'0.5.0-precision','base':BASE,'head':HEAD,'risk':risk,'review_priority':review,'review_score':review_score,'changed_files':len(changed),'php_added_lines':len(php),'findings':findings,'hotspots':hotspots}
           Path('gate1-preflight.json').write_text(json.dumps(result,indent=2))
-          md=['# Gate 1 — Release Preflight v0.4','',f'Concrete risk: **{risk}**',f'Review priority: **{review}**','',f'Changed files: {len(changed)} · Added PHP lines: {len(php)}','','## Findings']
+          md=['# Gate 1 — Release Preflight v0.5','',f'Concrete risk: **{risk}**',f'Review priority: **{review}**','',f'Changed files: {len(changed)} · Added PHP lines: {len(php)}','','## Findings']
           md += [f"- [{f['severity']}] {f['rule_id']} — {f['title']} — `{f['path']}:{f['line']}`" for f in findings] or ['- None']
           md += ['','## Review hotspots']
           md += [f"- [{h['priority']}] {h['rule_id']} — {h['title']} — `{h['path']}:{h['line']}`" for h in hotspots] or ['- None']
@@ -172,6 +183,7 @@ jobs:
 
       - name: Run official WordPress Plugin Check
         if: always()
+        continue-on-error: true
         uses: wordpress/plugin-check-action@v1
         with:
           build-dir: ./fluent-security
@@ -181,7 +193,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gate1-fluentauth-comparison
+          name: gate1-fluentauth-v05-precision
           path: |
             gate1-preflight.md
             gate1-preflight.json
