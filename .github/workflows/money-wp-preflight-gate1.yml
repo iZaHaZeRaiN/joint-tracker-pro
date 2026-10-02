@@ -1,4 +1,4 @@
-name: Gate 1 — HivePress Authentication 1.1.5 fix
+name: Gate 1 — FluentAuth 2.1.2 to 3.0.0 blind
 
 on:
   workflow_dispatch:
@@ -18,21 +18,21 @@ jobs:
       - name: Checkout harness branch
         uses: actions/checkout@v5
 
-      - name: Checkout HivePress Authentication security fix
+      - name: Checkout FluentAuth 3.0.0
         shell: bash
         run: |
-          git clone https://github.com/hivepress/hivepress-authentication.git hivepress-authentication
-          git -C hivepress-authentication checkout f97d9109002905cf57597d15c535d1155dc64657
+          git clone https://github.com/WPManageNinja/fluent-security.git fluent-security
+          git -C fluent-security checkout 34c292780a19dbdc1e49fc972949a1c3818ca90a
 
-      - name: Run Release Preflight v0.3 benchmark logic
+      - name: Run Release Preflight v0.4 benchmark logic
         shell: bash
         run: |
           cat > /tmp/preflight_gate1.py <<'PY'
           import json, re, subprocess
           from pathlib import Path
 
-          REPO = Path('hivepress-authentication')
-          BASE = 'caabc4ca65db9e0d125e65bca4f2b2f29fde04f7'
+          REPO = Path('fluent-security')
+          BASE = 'e8abf79e274d126b61eecf6c3f5e2f32418c944d'
           HEAD = 'HEAD'
 
           def git(*args):
@@ -104,13 +104,19 @@ jobs:
               if re.search(r'\b(update_option|add_option|delete_option|update_user_meta|add_user_meta|delete_user_meta|wp_insert_user|wp_update_user|set_role|add_role)\s*\(',t): hot('WPRH006','state-change','MEDIUM','Privileged WordPress state mutation changed',x)
               if re.search(r'\b(realpath|wp_normalize_path|basename|pathinfo)\s*\(',t) and any(s in sf for s in ('file_get_contents(','readfile(','fopen(','getfile(','getcontents(','is_file(','file_exists(','glob(','strpos(','str_starts_with(')): hot('WPRH007','file-path','MEDIUM','Local file path / read trust boundary changed',x)
 
+              token_terms=('access_token','id_token','oauth','openid','jwt','bearer','client_secret','app_secret','token_data')
+              identity_terms=('authentication','authenticate','login','user','email','profile','identity','invalid_client')
+              remote_terms=('wp_remote_get(','wp_remote_post(','wp_safe_remote_get(','wp_safe_remote_post(','curl_exec(')
+              if any(term in sf for term in token_terms) and any(term in sf for term in identity_terms) and any(term in sf for term in remote_terms) and any(term in low for term in token_terms):
+                  hot('WPRH008','external-auth','HIGH','External authentication/token trust boundary changed',x)
+
           risk='HIGH' if any(f['severity']=='HIGH' for f in findings) else ('MEDIUM' if findings else 'LOW')
           weights={'LOW':1,'MEDIUM':2,'HIGH':4}
           review_score=sum(weights[h['priority']] for h in hotspots)+(3 if len(php)>=500 else 0)
-          review='HIGH' if review_score>=5 else ('MEDIUM' if review_score else 'LOW')
-          result={'version':'0.3.0-benchmark','base':BASE,'head':HEAD,'risk':risk,'review_priority':review,'review_score':review_score,'changed_files':len(changed),'php_added_lines':len(php),'findings':findings,'hotspots':hotspots}
+          review='HIGH' if any(h['priority']=='HIGH' for h in hotspots) or review_score>=5 else ('MEDIUM' if review_score else 'LOW')
+          result={'version':'0.4.0-benchmark','base':BASE,'head':HEAD,'risk':risk,'review_priority':review,'review_score':review_score,'changed_files':len(changed),'php_added_lines':len(php),'findings':findings,'hotspots':hotspots}
           Path('gate1-preflight.json').write_text(json.dumps(result,indent=2))
-          md=['# Gate 1 — Release Preflight v0.3','',f'Concrete risk: **{risk}**',f'Review priority: **{review}**','',f'Changed files: {len(changed)} · Added PHP lines: {len(php)}','','## Findings']
+          md=['# Gate 1 — Release Preflight v0.4','',f'Concrete risk: **{risk}**',f'Review priority: **{review}**','',f'Changed files: {len(changed)} · Added PHP lines: {len(php)}','','## Findings']
           md += [f"- [{f['severity']}] {f['rule_id']} — {f['title']} — `{f['path']}:{f['line']}`" for f in findings] or ['- None']
           md += ['','## Review hotspots']
           md += [f"- [{h['priority']}] {h['rule_id']} — {h['title']} — `{h['path']}:{h['line']}`" for h in hotspots] or ['- None']
@@ -141,7 +147,7 @@ jobs:
             --extensions=php \
             --ignore='*/vendor/*,*/node_modules/*' \
             --report=json \
-            hivepress-authentication > gate1-wpcs.json
+            fluent-security > gate1-wpcs.json
           echo "WPCS_EXIT=$?" >> "$GITHUB_ENV"
           set -e
           python3 - <<'PY'
@@ -168,14 +174,14 @@ jobs:
         if: always()
         uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: ./hivepress-authentication
+          build-dir: ./fluent-security
           strict: false
 
       - name: Upload Gate 1 comparison artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gate1-hivepress-comparison
+          name: gate1-fluentauth-comparison
           path: |
             gate1-preflight.md
             gate1-preflight.json
