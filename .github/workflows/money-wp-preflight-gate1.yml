@@ -120,14 +120,21 @@ jobs:
           python3 /tmp/preflight_gate1.py
 
       - name: Install WPCS
+        continue-on-error: true
         shell: bash
         run: |
+          composer init --no-interaction --name=money/wp-preflight-benchmark
           composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
           composer require --dev wp-coding-standards/wpcs:"^3.0"
 
       - name: Run WPCS security sniffs
+        if: always()
         shell: bash
         run: |
+          if [ ! -x vendor/bin/phpcs ]; then
+            printf '%s\n' '{"error":"WPCS installation failed; no PHPCS executable available"}' > gate1-wpcs.json
+            exit 0
+          fi
           set +e
           vendor/bin/phpcs \
             --standard=WordPress \
@@ -140,6 +147,7 @@ jobs:
           set -e
 
       - name: Run official WordPress Plugin Check
+        if: always()
         uses: wordpress/plugin-check-action@v1
         with:
           build-dir: ./target-plugin
