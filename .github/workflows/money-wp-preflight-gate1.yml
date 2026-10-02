@@ -1,0 +1,157 @@
+name: Gate 1 — ShortPixel 6.4.3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - money-wp-preflight-benchmark
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout harness branch
+        uses: actions/checkout@v5
+
+      - name: Checkout ShortPixel 6.4.3
+        shell: bash
+        run: |
+          git clone https://github.com/short-pixel-optimizer/shortpixel-image-optimiser.git target-plugin
+          git -C target-plugin checkout c84d97581ae95f1a8c16f0e6eb1a0715b1a5cd56
+
+      - name: Run Release Preflight v0.3 benchmark logic
+        shell: bash
+        run: |
+          cat > /tmp/preflight_gate1.py <<'PY'
+          import json, re, subprocess
+          from pathlib import Path
+
+          REPO = Path('target-plugin')
+          BASE = 'b03f2293515e5555f3869991f78aa39abede6f2c'
+          HEAD = 'HEAD'
+
+          def git(*args):
+              p = subprocess.run(['git','-C',str(REPO),*args], text=True, capture_output=True)
+              if p.returncode:
+                  raise SystemExit(p.stderr)
+              return p.stdout
+
+          diff = git('diff','--no-ext-diff','--unified=4',f'{BASE}..{HEAD}','--',':!vendor',':!node_modules')
+          added=[]; changed=set(); path=None; new_line=0; in_hunk=False
+          for raw in diff.splitlines():
+              if raw.startswith('+++ b/'):
+                  path=raw[6:]; changed.add(path); continue
+              if raw.startswith('@@'):
+                  m=re.search(r'\+(\d+)(?:,(\d+))?', raw)
+                  in_hunk=bool(m)
+                  if m: new_line=int(m.group(1))
+                  continue
+              if not in_hunk or not path: continue
+              if raw.startswith('+') and not raw.startswith('+++'):
+                  added.append({'path':path,'line':new_line,'text':raw[1:]}); new_line+=1
+              elif raw.startswith('-') and not raw.startswith('---'):
+                  pass
+              else:
+                  new_line+=1
+
+          php=[x for x in added if x['path'].lower().endswith('.php')]
+          by_file={}
+          for x in php: by_file.setdefault(x['path'],[]).append(x)
+          findings=[]; hotspots=[]; hotkeys=set()
+
+          def ctx(x, radius=6):
+              a=by_file[x['path']]; i=a.index(x)
+              return '\n'.join(y['text'] for y in a[max(0,i-radius):i+radius+1]).lower()
+          def full(x):
+              return '\n'.join(y['text'] for y in by_file[x['path']]).lower()
+          def add(rule, sev, title, x):
+              findings.append({'rule_id':rule,'severity':sev,'title':title,'path':x['path'],'line':x['line'],'evidence':x['text'].strip()[:220]})
+          def hot(rule, cat, pri, title, x):
+              k=(rule,x['path'])
+              if k in hotkeys: return
+              hotkeys.add(k)
+              hotspots.append({'rule_id':rule,'category':cat,'priority':pri,'title':title,'path':x['path'],'line':x['line'],'evidence':x['text'].strip()[:220]})
+
+          for x in php:
+              t=x['text']; low=t.lower(); c=ctx(x); sf=full(x)
+              if re.search(r'\b(eval|assert)\s*\(',t) or re.search(r'\b(shell_exec|exec|system|passthru|proc_open|popen)\s*\(',t): add('WPRP001','HIGH','Runtime code/command execution added',x)
+              if 'base64_decode(' in low and ('$_' in t or re.search(r'base64_decode\s*\(\s*\$[A-Za-z_]',t)): add('WPRP002','HIGH','Decoded dynamic payload added',x)
+              if re.search(r"add_action\s*\(\s*['\"]wp_ajax_nopriv_",t): add('WPRP003','MEDIUM' if 'current_user_can(' in c else 'HIGH','Unauthenticated AJAX endpoint added',x)
+              if 'register_rest_route(' in t and 'permission_callback' not in c: add('WPRP004','HIGH','REST route may lack permission_callback',x)
+              if re.search(r'\$wpdb->(query|get_results|get_row|get_var)\s*\(',t) and 'prepare(' not in c and any(s in c for s in ('$_get','$_post','$_request')): add('WPRP005','HIGH','Potential unprepared database query',x)
+              if re.search(r'\bunserialize\s*\(',t) and ('$_' in c or 'wp_remote' in c): add('WPRP006','HIGH','Unserialize on external/request-influenced data',x)
+              if re.search(r'\b(include|include_once|require|require_once)\s*\(',t) and ('$_' in c or 'http://' in c or 'https://' in c): add('WPRP007','HIGH','Dynamic/remote include added',x)
+              if re.search(r'\b(wp_set_auth_cookie|wp_set_current_user)\s*\(',t) and any(s in c for s in ('$_request','$_get','$_post','$_cookie')): add('WPRP012','HIGH','Request-driven authentication/session mutation',x)
+              if 'determine_current_user' in low and 'add_filter' in low and any(s in sf for s in ('$_cookie','$_request','$_get','$_post')): add('WPRP013','HIGH','Request/cookie-driven current-user override added',x)
+              mut=bool(re.search(r'\b(update_option|add_option|update_user_meta|add_user_meta|wp_insert_user|wp_update_user|wp_set_auth_cookie|wp_set_current_user|set_role|add_role)\s*\(',t))
+              if mut and any(s in c for s in ('wp_ajax_','register_rest_route','admin_post_')):
+                  cap='current_user_can(' in c; nonce=any(s in c for s in ('check_ajax_referer(','check_admin_referer(','wp_verify_nonce('))
+                  if not cap: add('WPRP008','HIGH','Privileged state mutation near endpoint without visible capability check',x)
+                  elif not nonce: add('WPRP009','MEDIUM','State mutation has capability check but no visible nonce verification',x)
+              if re.search(r'\b(move_uploaded_file|wp_handle_upload|unlink|file_put_contents|fopen|rename)\s*\(',t) and ('$_' in c or 'request' in c): add('WPRP010','HIGH','Request-influenced file operation added',x)
+              if ('wp_remote_get(' in low or 'wp_remote_post(' in low) and any(s in c for s in ('eval(','include(','require(','file_put_contents(')): add('WPRP011','HIGH','Remote content participates in executable/write path',x)
+
+              if re.search(r'\b(determine_current_user|authenticate|wp_set_auth_cookie|wp_set_current_user|wp_signon|wp_authenticate|xmlrpc_methods|xmlrpc_call)\b',low): hot('WPRH001','authentication','HIGH','Authentication / identity flow changed',x)
+              if re.search(r"add_action\s*\(\s*['\"]wp_ajax_",t) or re.search(r"add_action\s*\(\s*['\"]admin_post_",t) or 'register_rest_route(' in t or 'current_user_can(' in t or 'user_can(' in t or 'map_meta_cap' in low: hot('WPRH002','authorization','MEDIUM','Authorization-sensitive endpoint/capability logic changed',x)
+              if re.search(r'\$wpdb->(query|get_results|get_row|get_var|insert|update|delete)\s*\(',t) or '$wpdb->prepare(' in t: hot('WPRH003','database','MEDIUM','Database query surface changed',x)
+              if re.search(r'\b(wp_redirect|wp_safe_redirect|wp_validate_redirect)\s*\(',t) or 'allowed_redirect_hosts' in low: hot('WPRH004','redirect','MEDIUM','Redirect trust boundary changed',x)
+              if re.search(r'\b(move_uploaded_file|wp_handle_upload|unlink|file_put_contents|fopen|rename|copy)\s*\(',t) or 'wp_filesystem' in low: hot('WPRH005','filesystem','MEDIUM','Filesystem/write surface changed',x)
+              if re.search(r'\b(update_option|add_option|delete_option|update_user_meta|add_user_meta|delete_user_meta|wp_insert_user|wp_update_user|set_role|add_role)\s*\(',t): hot('WPRH006','state-change','MEDIUM','Privileged WordPress state mutation changed',x)
+              if re.search(r'\b(realpath|wp_normalize_path|basename|pathinfo)\s*\(',t) and any(s in sf for s in ('file_get_contents(','readfile(','fopen(','getfile(','getcontents(','is_file(','file_exists(','glob(','strpos(','str_starts_with(')): hot('WPRH007','file-path','MEDIUM','Local file path / read trust boundary changed',x)
+
+          risk='HIGH' if any(f['severity']=='HIGH' for f in findings) else ('MEDIUM' if findings else 'LOW')
+          weights={'LOW':1,'MEDIUM':2,'HIGH':4}
+          review_score=sum(weights[h['priority']] for h in hotspots)+(3 if len(php)>=500 else 0)
+          review='HIGH' if review_score>=5 else ('MEDIUM' if review_score else 'LOW')
+          result={'version':'0.3.0-benchmark','base':BASE,'head':HEAD,'risk':risk,'review_priority':review,'review_score':review_score,'changed_files':len(changed),'php_added_lines':len(php),'findings':findings,'hotspots':hotspots}
+          Path('gate1-preflight.json').write_text(json.dumps(result,indent=2))
+          md=['# Gate 1 — Release Preflight v0.3','',f'Concrete risk: **{risk}**',f'Review priority: **{review}**','',f'Changed files: {len(changed)} · Added PHP lines: {len(php)}','','## Findings']
+          md += [f"- [{f['severity']}] {f['rule_id']} — {f['title']} — `{f['path']}:{f['line']}`" for f in findings] or ['- None']
+          md += ['','## Review hotspots']
+          md += [f"- [{h['priority']}] {h['rule_id']} — {h['title']} — `{h['path']}:{h['line']}`" for h in hotspots] or ['- None']
+          Path('gate1-preflight.md').write_text('\n'.join(md)+'\n')
+          print(json.dumps(result,indent=2))
+          PY
+          python3 /tmp/preflight_gate1.py
+
+      - name: Install WPCS
+        shell: bash
+        run: |
+          composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+          composer require --dev wp-coding-standards/wpcs:"^3.0"
+
+      - name: Run WPCS security sniffs
+        shell: bash
+        run: |
+          set +e
+          vendor/bin/phpcs \
+            --standard=WordPress \
+            --sniffs=WordPress.Security \
+            --extensions=php \
+            --ignore='*/vendor/*,*/node_modules/*' \
+            --report=json \
+            target-plugin > gate1-wpcs.json
+          echo "WPCS_EXIT=$?" >> "$GITHUB_ENV"
+          set -e
+
+      - name: Run official WordPress Plugin Check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: ./target-plugin
+          strict: false
+
+      - name: Upload Gate 1 comparison artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gate1-shortpixel-comparison
+          path: |
+            gate1-preflight.md
+            gate1-preflight.json
+            gate1-wpcs.json
+          if-no-files-found: warn
