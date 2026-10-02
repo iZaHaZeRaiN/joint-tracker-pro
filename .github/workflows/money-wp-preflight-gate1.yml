@@ -1,4 +1,4 @@
-name: Gate 1 — Debugger & Troubleshooter 1.3.0
+name: Gate 1 — HivePress Authentication 1.1.5 fix
 
 on:
   workflow_dispatch:
@@ -18,11 +18,11 @@ jobs:
       - name: Checkout harness branch
         uses: actions/checkout@v5
 
-      - name: Checkout Debugger & Troubleshooter 1.3.0
+      - name: Checkout HivePress Authentication security fix
         shell: bash
         run: |
-          git clone https://github.com/jhimross/debugger-troubleshooter.git debugger-troubleshooter
-          git -C debugger-troubleshooter checkout a86988e602630a304dd004e47f1461d7c1819e78
+          git clone https://github.com/hivepress/hivepress-authentication.git hivepress-authentication
+          git -C hivepress-authentication checkout f97d9109002905cf57597d15c535d1155dc64657
 
       - name: Run Release Preflight v0.3 benchmark logic
         shell: bash
@@ -31,8 +31,8 @@ jobs:
           import json, re, subprocess
           from pathlib import Path
 
-          REPO = Path('debugger-troubleshooter')
-          BASE = 'd8e2ef2308f5decd7ff1a05af1dd51e13084ba6c'
+          REPO = Path('hivepress-authentication')
+          BASE = 'caabc4ca65db9e0d125e65bca4f2b2f29fde04f7'
           HEAD = 'HEAD'
 
           def git(*args):
@@ -141,7 +141,7 @@ jobs:
             --extensions=php \
             --ignore='*/vendor/*,*/node_modules/*' \
             --report=json \
-            debugger-troubleshooter > gate1-wpcs.json
+            hivepress-authentication > gate1-wpcs.json
           echo "WPCS_EXIT=$?" >> "$GITHUB_ENV"
           set -e
           python3 - <<'PY'
@@ -168,14 +168,14 @@ jobs:
         if: always()
         uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: ./debugger-troubleshooter
+          build-dir: ./hivepress-authentication
           strict: false
 
       - name: Upload Gate 1 comparison artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gate1-debugger-comparison
+          name: gate1-hivepress-comparison
           path: |
             gate1-preflight.md
             gate1-preflight.json
