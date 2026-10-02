@@ -1,4 +1,4 @@
-name: Gate 1 — ShortPixel 6.4.3
+name: Gate 1 — Debugger & Troubleshooter 1.3.0
 
 on:
   workflow_dispatch:
@@ -18,11 +18,11 @@ jobs:
       - name: Checkout harness branch
         uses: actions/checkout@v5
 
-      - name: Checkout ShortPixel 6.4.3
+      - name: Checkout Debugger & Troubleshooter 1.3.0
         shell: bash
         run: |
-          git clone https://github.com/short-pixel-optimizer/shortpixel-image-optimiser.git shortpixel-image-optimiser
-          git -C shortpixel-image-optimiser checkout c84d97581ae95f1a8c16f0e6eb1a0715b1a5cd56
+          git clone https://github.com/jhimross/debugger-troubleshooter.git debugger-troubleshooter
+          git -C debugger-troubleshooter checkout a86988e602630a304dd004e47f1461d7c1819e78
 
       - name: Run Release Preflight v0.3 benchmark logic
         shell: bash
@@ -31,8 +31,8 @@ jobs:
           import json, re, subprocess
           from pathlib import Path
 
-          REPO = Path('shortpixel-image-optimiser')
-          BASE = 'b03f2293515e5555f3869991f78aa39abede6f2c'
+          REPO = Path('debugger-troubleshooter')
+          BASE = 'd8e2ef2308f5decd7ff1a05af1dd51e13084ba6c'
           HEAD = 'HEAD'
 
           def git(*args):
@@ -141,7 +141,7 @@ jobs:
             --extensions=php \
             --ignore='*/vendor/*,*/node_modules/*' \
             --report=json \
-            shortpixel-image-optimiser > gate1-wpcs.json
+            debugger-troubleshooter > gate1-wpcs.json
           echo "WPCS_EXIT=$?" >> "$GITHUB_ENV"
           set -e
           python3 - <<'PY'
@@ -168,14 +168,14 @@ jobs:
         if: always()
         uses: wordpress/plugin-check-action@v1
         with:
-          build-dir: ./shortpixel-image-optimiser
+          build-dir: ./debugger-troubleshooter
           strict: false
 
       - name: Upload Gate 1 comparison artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gate1-shortpixel-comparison
+          name: gate1-debugger-comparison
           path: |
             gate1-preflight.md
             gate1-preflight.json
